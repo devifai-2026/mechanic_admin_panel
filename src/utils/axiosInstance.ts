@@ -3,6 +3,8 @@ import axios from "axios";
 
 const isProduction = true; // Change this to false for development
 
+console.log("Axios Instance - Production Mode:", isProduction);
+
 const url = {
   production: "https://www.devifai.website/api/master/super/admin",
   development: "http://localhost:8000/api/master/super/admin",
