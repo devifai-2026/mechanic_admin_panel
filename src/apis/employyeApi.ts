@@ -43,7 +43,7 @@ export const updateEmployee = async (
   payload: EmployeePayload
 ): Promise<Employee> => {
   try {
-    const res = await axiosInstance.patch(`/employee/update/${id}`, payload);
+    const res = await axiosInstance.post(`/employee/update/${id}`, payload);
     return res.data;
   } catch (error) {
     console.error(`Failed to update employee with id ${id}`, error);

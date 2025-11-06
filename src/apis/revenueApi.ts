@@ -42,7 +42,7 @@ export const updateRevenue = async (
   payload: Omit<RevenueMaster, "id" | "createdAt" | "updatedAt">
 ): Promise<RevenueMaster> => {
   try {
-    const res = await axiosInstance.patch(`/revenue_master/update/${id}`, payload);
+    const res = await axiosInstance.post(`/revenue_master/update/${id}`, payload);
     return res.data;
   } catch (error) {
     console.error(`Failed to update revenue with id ${id}`, error);

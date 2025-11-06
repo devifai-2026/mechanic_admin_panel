@@ -41,7 +41,7 @@ export const updateItem = async (
   payload: ItemPostPayload
 ): Promise<Item> => {
   try {
-    const res = await axiosInstance.patch(`/consumableitems/${id}`, payload);
+    const res = await axiosInstance.post(`/consumableitems/${id}`, payload);
     return res.data;
   } catch (error) {
     console.error(`Failed to update item with id ${id}`, error);

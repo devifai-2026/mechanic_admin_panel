@@ -40,7 +40,7 @@ export const updateShift = async (
   payload: ShiftPayload
 ): Promise<Shift> => {
   try {
-    const res = await axiosInstance.patch(`/shift/update/${id}`, payload);
+    const res = await axiosInstance.post(`/shift/update/${id}`, payload);
     return res.data;
   } catch (error) {
     console.error(`Failed to update shift with id ${id}`, error);

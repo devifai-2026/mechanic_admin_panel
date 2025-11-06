@@ -44,7 +44,7 @@ export const updateEquipment = async (
   payload: EquipmentPayload
 ): Promise<EquipmentResponse> => {
   try {
-    const res = await axiosInstance.patch(`/equipment/update/${id}`, payload);
+    const res = await axiosInstance.post(`/equipment/update/${id}`, payload);
     return res.data;
   } catch (error) {
     console.error(`Failed to update equipment with id ${id}`, error);

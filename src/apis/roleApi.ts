@@ -40,7 +40,7 @@ export const updateRole = async (
   payload: RolePayload
 ): Promise<Role> => {
   try {
-    const res = await axiosInstance.patch(`/role/update/${id}`, payload);
+    const res = await axiosInstance.post(`/role/update/${id}`, payload);
     return res.data;
   } catch (error) {
     console.error(`Failed to update role with id ${id}`, error);

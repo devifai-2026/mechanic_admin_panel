@@ -49,7 +49,7 @@ export const updateEquipmentGroup = async (
   payload: EquipmentGroupPayload
 ): Promise<EquipmentGroupResponse> => {
   try {
-    const res = await axiosInstance.patch(
+    const res = await axiosInstance.post(
       `/equipmentGroup/update/${id}`,
       payload
     );

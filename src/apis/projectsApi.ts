@@ -59,7 +59,7 @@ export const updateProject = async (
   payload: Partial<ProjectPayload>
 ): Promise<Project> => {
   try {
-    const res = await axiosInstance.patch(`/project/update/${id}`, payload);
+    const res = await axiosInstance.post(`/project/update/${id}`, payload);
     return res.data;
   } catch (error) {
     return handleApiError(error, `Failed to update project with ID ${id}`);

@@ -42,7 +42,7 @@ export const updateCustomer = async (
   payload: CustomerPayload
 ): Promise<Customer> => {
   try {
-    const res = await axiosInstance.patch(`/partner/update/${id}`, payload);
+    const res = await axiosInstance.post(`/partner/update/${id}`, payload);
     return res.data;
   } catch (error) {
     console.error(`Failed to update customer with id ${id}`, error);

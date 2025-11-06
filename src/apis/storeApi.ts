@@ -40,7 +40,7 @@ export const updateStore = async (
   payload: StorePayload
 ): Promise<Store> => {
   try {
-    const res = await axiosInstance.patch(`/store/update/${id}`, payload);
+    const res = await axiosInstance.post(`/store/update/${id}`, payload);
     return res.data;
   } catch (error) {
     console.error(`Failed to update store with id ${id}`, error);
