@@ -25,10 +25,10 @@ import { getAllOEMs } from "../../apis/oemApi";
 const uploadToCloudinary = async (file: File): Promise<string> => {
   const formData = new FormData();
   formData.append("file", file);
-  formData.append("upload_preset", "maco_corporation");
+  formData.append("upload_preset", "maco_corporationnew");
   formData.append("folder", "equipment_docs");
 
-  const cloudName = "dlol2hjj8";
+  const cloudName = "dfjpc4teh";
 
   const response = await axios.post(
     `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`,
