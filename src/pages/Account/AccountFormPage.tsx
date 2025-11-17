@@ -113,12 +113,14 @@ export default function AccountFormPage() {
               name="account_name"
               value={formData.account_name}
               onChange={handleChange}
+              placeholder="Enter account name (e.g., Cash Account, Bank Account)"
             />
             <InputField
               label="Account Code"
               name="account_code"
               value={formData.account_code}
               onChange={handleChange}
+              placeholder="Enter account code (e.g., ACC-001, BNK-001)"
             />
             <SelectField
               label="Account Group"
@@ -164,12 +166,14 @@ const InputField = ({
   value,
   onChange,
   type = "text",
+  placeholder = ""
 }: {
   label: string;
   name: string;
   value: any;
   onChange: React.ChangeEventHandler<HTMLInputElement>;
   type?: string;
+  placeholder?: string;
 }) => (
   <div>
     <label className="mb-1 text-gray-700 dark:text-gray-200 font-medium">
@@ -180,7 +184,8 @@ const InputField = ({
       name={name}
       value={value}
       onChange={onChange}
-      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
+      placeholder={placeholder}
+      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
     />
   </div>
 );
@@ -209,7 +214,7 @@ const SelectField = ({
       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
       required
     >
-      <option value="">Select Group</option>
+      <option value="">Select Account Group</option>
       {options.map((opt) => (
         <option key={opt.id} value={opt.id}>
           {opt.account_group_name}

@@ -101,12 +101,14 @@ export default function EquipmentGroupFormPage() {
               name="equipment_group"
               value={formData.equipment_group}
               onChange={handleChange}
+              placeholder="Enter equipment group name (e.g., Heavy Machinery, Electrical Equipment)"
             />
             <InputField
               label="Group Code"
               name="equip_grp_code"
               value={formData.equip_grp_code}
               onChange={handleChange}
+              placeholder="Enter equipment group code (e.g., HM-001, ELEC-01)"
             />
             <div className="flex justify-end gap-4 mt-6">
               <button
@@ -145,12 +147,14 @@ const InputField = ({
   value,
   onChange,
   type = "text",
+  placeholder = ""
 }: {
   label: string;
   name: string;
   value: any;
   onChange: React.ChangeEventHandler<HTMLInputElement>;
   type?: string;
+  placeholder?: string;
 }) => (
   <div>
     <label className="mb-1 text-gray-700 dark:text-gray-200 font-medium">
@@ -161,7 +165,8 @@ const InputField = ({
       name={name}
       value={value}
       onChange={onChange}
-      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
+      placeholder={placeholder}
+      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
     />
   </div>
 );

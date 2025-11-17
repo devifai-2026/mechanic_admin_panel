@@ -220,7 +220,8 @@ export default function PartnerFormPage() {
                   value={formData.partner_name}
                   onChange={handleChange}
                   required
-                  className="w-full pl-10 pr-3 py-2 border rounded bg-gray-50 dark:bg-gray-700 dark:text-white"
+                  placeholder="Enter partner company name"
+                  className="w-full pl-10 pr-3 py-2 border rounded bg-gray-50 dark:bg-gray-700 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                 />
               </div>
             </div>
@@ -239,7 +240,8 @@ export default function PartnerFormPage() {
                   name="partner_gst"
                   value={formData.partner_gst}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-3 py-2 border rounded bg-gray-50 dark:bg-gray-700 dark:text-white"
+                  placeholder="Enter GST number (e.g., 07AABCU9603R1ZM)"
+                  className="w-full pl-10 pr-3 py-2 border rounded bg-gray-50 dark:bg-gray-700 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                 />
               </div>
             </div>
@@ -258,7 +260,8 @@ export default function PartnerFormPage() {
                   name="partner_geo_id"
                   value={formData.partner_geo_id}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-3 py-2 border rounded bg-gray-50 dark:bg-gray-700 dark:text-white"
+                  placeholder="Enter geographical ID"
+                  className="w-full pl-10 pr-3 py-2 border rounded bg-gray-50 dark:bg-gray-700 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                 />
               </div>
             </div>
@@ -276,7 +279,9 @@ export default function PartnerFormPage() {
                   name="partner_address"
                   value={formData.partner_address}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-3 py-2 border rounded bg-gray-50 dark:bg-gray-700 dark:text-white"
+                  placeholder="Enter complete address with street, city, and state"
+                  rows={4}
+                  className="w-full pl-10 pr-3 py-2 border rounded bg-gray-50 dark:bg-gray-700 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 resize-vertical"
                 />
               </div>
             </div>
@@ -313,7 +318,7 @@ export default function PartnerFormPage() {
                   value={formData.city}
                   onChange={handleCityChange}
                   disabled={!formData.state}
-                  className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  className="w-full px-3 py-2 border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <option value="">Select City</option>
                   {cities.map((city) => {
@@ -337,7 +342,9 @@ export default function PartnerFormPage() {
                   name="pincode"
                   value={formData.pincode}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border rounded bg-gray-50 dark:bg-gray-700 dark:text-white"
+                  placeholder="Enter 6-digit pincode"
+                  maxLength={6}
+                  className="w-full px-3 py-2 border rounded bg-gray-50 dark:bg-gray-700 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                 />
               </div>
             </div>
@@ -349,7 +356,7 @@ export default function PartnerFormPage() {
                 name="isCustomer"
                 checked={formData.isCustomer}
                 onChange={handleChange}
-                className="mr-2"
+                className="mr-2 w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
               />
               <label className="text-gray-700 dark:text-gray-200">
                 Is Customer
@@ -361,22 +368,22 @@ export default function PartnerFormPage() {
               <button
                 type="button"
                 onClick={() => navigate("/partners/view")}
-                className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500"
+                className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading
                   ? isEdit
                     ? "Updating..."
                     : "Creating..."
                   : isEdit
-                  ? "Update"
-                  : "Create"}
+                  ? "Update Partner"
+                  : "Create Partner"}
               </button>
             </div>
           </form>

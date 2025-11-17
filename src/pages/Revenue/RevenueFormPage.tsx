@@ -148,20 +148,20 @@ const RevenueFormPage: React.FC = () => {
       <div className="flex space-x-4 mb-6">
         <button
           onClick={() => setActiveTab("single")}
-          className={`px-4 py-2 rounded-md ${
+          className={`px-4 py-2 rounded-md transition-colors ${
             activeTab === "single"
               ? "bg-blue-600 text-white"
-              : "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200"
+              : "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
           }`}
         >
           Single Upload
         </button>
         <button
           onClick={() => setActiveTab("bulk")}
-          className={`px-4 py-2 rounded-md ${
+          className={`px-4 py-2 rounded-md transition-colors ${
             activeTab === "bulk"
               ? "bg-blue-600 text-white"
-              : "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200"
+              : "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
           }`}
         >
           Bulk Upload
@@ -176,6 +176,7 @@ const RevenueFormPage: React.FC = () => {
             name="revenueCode"
             value={formData.revenueCode}
             onChange={handleChange}
+            placeholder="Enter revenue code (e.g., REV001)"
           />
           <InputField
             icon={<FaAlignLeft />}
@@ -183,6 +184,7 @@ const RevenueFormPage: React.FC = () => {
             name="description"
             value={formData.description}
             onChange={handleChange}
+            placeholder="Enter revenue description"
           />
           <InputField
             icon={<FaMoneyBill />}
@@ -191,34 +193,35 @@ const RevenueFormPage: React.FC = () => {
             type="number"
             value={formData.revenueValue}
             onChange={handleChange}
+            placeholder="Enter revenue value (e.g., 1000)"
           />
           <div className="flex justify-end gap-4 mt-4">
             <button
               type="button"
               onClick={() => navigate("/revenues/view")}
-              className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500"
+              className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading
                 ? isEdit
                   ? "Updating..."
                   : "Creating..."
                 : isEdit
-                ? "Update"
-                : "Create"}
+                ? "Update Revenue"
+                : "Create Revenue"}
             </button>
           </div>
         </form>
       ) : (
         <div className="space-y-4">
           <div
-            className="border-2 border-dashed p-6 rounded-md text-center"
+            className="border-2 border-dashed border-gray-300 dark:border-gray-600 p-6 rounded-md text-center cursor-pointer transition-colors hover:border-blue-400 dark:hover:border-blue-600"
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => {
               e.preventDefault();
@@ -227,12 +230,12 @@ const RevenueFormPage: React.FC = () => {
               }
             }}
           >
-            <FaUpload className="mx-auto mb-2 text-gray-400 text-2xl" />
+            <FaUpload className="mx-auto mb-2 text-gray-400 dark:text-gray-500 text-2xl" />
             <p className="text-gray-600 dark:text-gray-300">
               Drag & drop your file or
             </p>
-            <label className="cursor-pointer inline-block mt-2 bg-blue-600 text-white px-4 py-2 rounded">
-              Browse
+            <label className="cursor-pointer inline-block mt-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors">
+              Browse Files
               <input
                 ref={fileInputRef}
                 type="file"
@@ -241,17 +244,25 @@ const RevenueFormPage: React.FC = () => {
                 accept=".xlsx,.csv"
               />
             </label>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+              Supported formats: Excel (.xlsx), CSV (.csv)
+            </p>
 
             {file && (
               <div className="mt-4 flex justify-between items-center bg-gray-100 dark:bg-gray-700 p-3 rounded">
                 <div className="flex items-center space-x-3">
-                  <FaFileExcel className="text-green-600" />
-                  <span className="text-sm text-gray-700 dark:text-white">
-                    {file.name}
-                  </span>
+                  <FaFileExcel className="text-green-600 text-lg" />
+                  <div>
+                    <span className="text-sm font-medium text-gray-700 dark:text-white block">
+                      {file.name}
+                    </span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      {(file.size / 1024).toFixed(2)} KB
+                    </span>
+                  </div>
                 </div>
                 <FaTimes
-                  className="cursor-pointer text-gray-500"
+                  className="cursor-pointer text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
                   onClick={() => {
                     setFile(null);
                     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -265,7 +276,7 @@ const RevenueFormPage: React.FC = () => {
             <button
               onClick={handleUpload}
               disabled={!file || isUploading}
-              className={`px-4 py-2 rounded-md text-white flex items-center ${
+              className={`px-4 py-2 rounded-md text-white flex items-center transition-colors ${
                 !file || isUploading
                   ? "bg-blue-400 cursor-not-allowed"
                   : "bg-blue-600 hover:bg-blue-700"
@@ -283,12 +294,12 @@ const RevenueFormPage: React.FC = () => {
             </button>
           </div>
 
-          <div className="mt-6 pt-4 border-t dark:border-gray-700">
+          <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
             <h3 className="text-lg font-medium text-gray-800 dark:text-white mb-2">
               Download Template
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-              Use this template to prepare your revenue data.
+              Use this template to prepare your revenue data with the correct format.
             </p>
             <DownloadTemplateButtonRevenue />
           </div>
@@ -305,6 +316,7 @@ interface InputFieldProps {
   value: string;
   onChange: (e: ChangeEvent<HTMLInputElement>) => void;
   type?: string;
+  placeholder?: string;
 }
 
 const InputField: React.FC<InputFieldProps> = ({
@@ -314,20 +326,33 @@ const InputField: React.FC<InputFieldProps> = ({
   value,
   onChange,
   type = "text",
-}) => (
-  <div>
-    <label className="flex items-center mb-1 text-gray-700 dark:text-gray-200 font-medium">
-      <span className="mr-2">{icon}</span>
-      {label}
-    </label>
-    <input
-      type={type}
-      name={name}
-      value={value}
-      onChange={onChange}
-      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-    />
-  </div>
-);
+  placeholder = "",
+}) => {
+  // Default placeholders based on field type
+  const defaultPlaceholders: Record<string, string> = {
+    revenueCode: "Enter revenue code (e.g., REV001)",
+    description: "Enter revenue description",
+    revenueValue: "Enter revenue value (e.g., 1000)"
+  };
+
+  const fieldPlaceholder = placeholder || defaultPlaceholders[name] || `Enter ${label.toLowerCase()}`;
+
+  return (
+    <div>
+      <label className="flex items-center mb-1 text-gray-700 dark:text-gray-200 font-medium">
+        <span className="mr-2">{icon}</span>
+        {label}
+      </label>
+      <input
+        type={type}
+        name={name}
+        value={value}
+        onChange={onChange}
+        placeholder={fieldPlaceholder}
+        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+      />
+    </div>
+  );
+};
 
 export default RevenueFormPage;
