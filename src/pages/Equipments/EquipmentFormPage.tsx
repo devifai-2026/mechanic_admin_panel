@@ -146,14 +146,6 @@ export default function EquipmentFormPage() {
     }));
   };
 
-  // const safeParse = (jsonString: string) => {
-  //   try {
-  //     return jsonString ? JSON.parse(jsonString) : {};
-  //   } catch {
-  //     return {};
-  //   }
-  // };
-
   const handleFileChange = (e: any) => {
     const { name, files } = e.target;
     if (files.length > 0 && files[0].type === "application/pdf") {
@@ -273,6 +265,7 @@ export default function EquipmentFormPage() {
               name="equipmentName"
               value={formData.equipmentName}
               onChange={handleChange}
+              placeholder="Enter equipment name (e.g., Excavator, Crane)"
             />
             <InputField
               icon={<FaTag />}
@@ -280,6 +273,7 @@ export default function EquipmentFormPage() {
               name="serialNo"
               value={formData.serialNo}
               onChange={handleChange}
+              placeholder="Enter serial number"
             />
             <InputField
               icon={<FaTag />}
@@ -287,6 +281,7 @@ export default function EquipmentFormPage() {
               name="additionalId"
               value={formData.additionalId}
               onChange={handleChange}
+              placeholder="Enter additional identification number"
             />
             <div className="relative">
               <InputField
@@ -297,6 +292,7 @@ export default function EquipmentFormPage() {
                 onChange={handleChange}
                 type="date"
                 inputRef={dateInputRef}
+                placeholder=""
               />
               <FaCalendarAlt
                 className="absolute right-3 top-9 text-gray-400 cursor-pointer"
@@ -305,7 +301,12 @@ export default function EquipmentFormPage() {
             </div>
 
             <div>
-              <label>OEM</label>
+              <label className="flex items-center mb-1 text-gray-700 dark:text-gray-200 font-medium">
+                <span className="mr-2">
+                  <FaCogs />
+                </span>
+                OEM
+              </label>
               <Select
                 options={oemArr}
                 isSearchable
@@ -316,8 +317,32 @@ export default function EquipmentFormPage() {
                   }));
                 }}
                 value={oemArr.find((opt) => opt.value === formData.oem)}
-                placeholder="Select OEM"
+                placeholder="Select OEM manufacturer"
                 className="text-black"
+                styles={{
+                  control: (base) => ({
+                    ...base,
+                    backgroundColor: 'rgb(55 65 81)',
+                    borderColor: 'rgb(75 85 99)',
+                  }),
+                  menu: (base) => ({
+                    ...base,
+                    backgroundColor: 'rgb(55 65 81)',
+                  }),
+                  option: (base, state) => ({
+                    ...base,
+                    backgroundColor: state.isFocused ? 'rgb(75 85 99)' : 'rgb(55 65 81)',
+                    color: 'white'
+                  }),
+                  singleValue: (base) => ({
+                    ...base,
+                    color: 'white'
+                  }),
+                  input: (base) => ({
+                    ...base,
+                    color: 'white'
+                  })
+                }}
               />
             </div>
 
@@ -328,6 +353,7 @@ export default function EquipmentFormPage() {
               value={formData.purchaseCost}
               onChange={handleChange}
               type="number"
+              placeholder="Enter purchase cost in USD"
             />
 
             <div>
@@ -355,8 +381,8 @@ export default function EquipmentFormPage() {
                   formData.hsn_number.toString().length !== 8
                     ? "border-red-500"
                     : "border-gray-300"
-                } dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white`}
-                placeholder="Enter HSN Number (8 digits required)"
+                } dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                placeholder="Enter 8-digit HSN number"
               />
               {formData.hsn_number.toString().length > 0 &&
                 formData.hsn_number.toString().length !== 8 && (
@@ -413,22 +439,22 @@ export default function EquipmentFormPage() {
             <button
               type="button"
               onClick={() => navigate("/equipments/view")}
-              className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500"
+              className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading
                 ? isEdit
                   ? "Updating..."
                   : "Creating..."
                 : isEdit
-                ? "Update"
-                : "Create"}
+                ? "Update Equipment"
+                : "Create Equipment"}
             </button>
           </div>
         </form>
@@ -448,27 +474,41 @@ const InputField = ({
   onChange,
   type = "text",
   inputRef,
-}: any) => (
-  <div>
-    <label className="flex items-center mb-1 text-gray-700 dark:text-gray-200 font-medium">
-      <span className="mr-2">{icon}</span>
-      {label}
-    </label>
-    <input
-      type={type}
-      name={name}
-      value={value}
-      onChange={onChange}
-      ref={inputRef}
-      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
-    />
-  </div>
-);
+  placeholder = "",
+}: any) => {
+  // Default placeholders based on field name
+  const defaultPlaceholders: Record<string, string> = {
+    equipmentName: "Enter equipment name (e.g., Excavator, Crane)",
+    serialNo: "Enter serial number",
+    additionalId: "Enter additional identification number",
+    purchaseCost: "Enter purchase cost in USD",
+  };
+
+  const fieldPlaceholder = placeholder || defaultPlaceholders[name] || `Enter ${label.toLowerCase()}`;
+
+  return (
+    <div>
+      <label className="flex items-center mb-1 text-gray-700 dark:text-gray-200 font-medium">
+        <span className="mr-2">{icon}</span>
+        {label}
+      </label>
+      <input
+        type={type}
+        name={name}
+        value={value}
+        onChange={onChange}
+        ref={inputRef}
+        placeholder={fieldPlaceholder}
+        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+      />
+    </div>
+  );
+};
 
 // Reusable FileField
 const FileField = ({ icon, label, name, onChange }: any) => (
   <div className="md:col-span-2 mt-4">
-    <label className="block text-sm font-semibold text-gray-800 mb-2">
+    <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">
       <span className="inline-flex items-center gap-2">
         {icon}
         {label}
@@ -481,8 +521,13 @@ const FileField = ({ icon, label, name, onChange }: any) => (
       onChange={onChange}
       className="block w-full cursor-pointer text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md
         file:border-0 file:text-sm file:font-semibold
-        file:bg-blue-50 file:text-blue-700
-        hover:file:bg-blue-100 transition"
+        file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100
+        dark:file:bg-blue-900 dark:file:text-blue-300 dark:hover:file:bg-blue-800
+        transition-colors bg-white dark:bg-gray-700 text-gray-800 dark:text-white
+        border border-gray-300 dark:border-gray-600 rounded-md p-2"
     />
+    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+      Only PDF files are accepted
+    </p>
   </div>
 );

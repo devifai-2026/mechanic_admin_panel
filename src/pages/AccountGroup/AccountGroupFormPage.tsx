@@ -102,12 +102,14 @@ export default function AccountGroupFormPage() {
               name="account_group_name"
               value={formData.account_group_name}
               onChange={handleChange}
+              placeholder="Enter account group name (e.g., Current Assets, Fixed Assets)"
             />
             <InputField
               label="Group Code"
               name="account_group_code"
               value={formData.account_group_code}
               onChange={handleChange}
+              placeholder="Enter account group code (e.g., CA-001, FA-001)"
             />
             <div className="flex justify-end gap-4 mt-6">
               <button
@@ -146,12 +148,14 @@ const InputField = ({
   value,
   onChange,
   type = "text",
+  placeholder = ""
 }: {
   label: string;
   name: string;
   value: any;
   onChange: React.ChangeEventHandler<HTMLInputElement>;
   type?: string;
+  placeholder?: string;
 }) => (
   <div>
     <label className="mb-1 text-gray-700 dark:text-gray-200 font-medium">
@@ -162,7 +166,8 @@ const InputField = ({
       name={name}
       value={value}
       onChange={onChange}
-      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
+      placeholder={placeholder}
+      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
     />
   </div>
 );

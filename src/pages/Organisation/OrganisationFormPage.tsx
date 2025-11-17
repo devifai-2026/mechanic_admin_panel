@@ -69,10 +69,10 @@ export default function OrganisationFormPage() {
       <div className="mb-6 flex gap-4">
         <button
           onClick={() => setActiveTab("form")}
-          className={`flex items-center px-4 py-2 rounded-md transition ${
+          className={`flex items-center px-4 py-2 rounded-md transition-colors ${
             activeTab === "form"
               ? "bg-blue-500 text-white"
-              : "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200"
+              : "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
           }`}
         >
           Organisation Form
@@ -80,10 +80,10 @@ export default function OrganisationFormPage() {
         {!isEdit && (
           <button
             onClick={() => setActiveTab("bulk")}
-            className={`flex items-center px-4 py-2 rounded-md transition ${
+            className={`flex items-center px-4 py-2 rounded-md transition-colors ${
               activeTab === "bulk"
                 ? "bg-blue-500 text-white"
-                : "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200"
+                : "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
             }`}
           >
             <span className="mr-2">
@@ -112,33 +112,35 @@ export default function OrganisationFormPage() {
               name="org_name"
               value={formData.org_name}
               onChange={handleChange}
+              placeholder="Enter organisation name (e.g., MACO Corporation)"
             />
             <InputField
               label="Organisation Code"
               name="org_code"
               value={formData.org_code}
               onChange={handleChange}
+              placeholder="Enter organisation code (e.g., MACO, CORP)"
             />
             <div className="flex justify-end gap-4 mt-6">
               <button
                 type="button"
                 onClick={() => navigate("/organisations/view")}
-                className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500"
+                className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading
                   ? isEdit
                     ? "Updating..."
                     : "Creating..."
                   : isEdit
-                  ? "Update"
-                  : "Create"}
+                  ? "Update Organisation"
+                  : "Create Organisation"}
               </button>
             </div>
           </form>
@@ -156,23 +158,36 @@ const InputField = ({
   value,
   onChange,
   type = "text",
+  placeholder = "",
 }: {
   label: string;
   name: string;
   value: any;
   onChange: React.ChangeEventHandler<HTMLInputElement>;
   type?: string;
-}) => (
-  <div>
-    <label className="mb-1 text-gray-700 dark:text-gray-200 font-medium">
-      {label}
-    </label>
-    <input
-      type={type}
-      name={name}
-      value={value}
-      onChange={onChange}
-      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
-    />
-  </div>
-);
+  placeholder?: string;
+}) => {
+  // Default placeholders based on field name
+  const defaultPlaceholders: Record<string, string> = {
+    org_name: "Enter organisation name (e.g., MACO Corporation)",
+    org_code: "Enter organisation code (e.g., MACO, CORP)"
+  };
+
+  const fieldPlaceholder = placeholder || defaultPlaceholders[name] || `Enter ${label.toLowerCase()}`;
+
+  return (
+    <div>
+      <label className="mb-1 text-gray-700 dark:text-gray-200 font-medium">
+        {label}
+      </label>
+      <input
+        type={type}
+        name={name}
+        value={value}
+        onChange={onChange}
+        placeholder={fieldPlaceholder}
+        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+      />
+    </div>
+  );
+};

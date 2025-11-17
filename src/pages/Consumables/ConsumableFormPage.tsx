@@ -20,8 +20,6 @@ import { getAllAccounts } from "../../apis/accountApi";
 import { fetchRevenues } from "../../apis/revenueApi";
 import ConsumableBulkUpload from "./ConsumableBulkUpload";
 
-// (imports stay the same)
-
 export default function ConsumableFormPage() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -160,10 +158,10 @@ export default function ConsumableFormPage() {
       <div className="mb-6 flex gap-4">
         <button
           onClick={() => setActiveTab("form")}
-          className={`flex items-center px-4 py-2 rounded-md transition ${
+          className={`flex items-center px-4 py-2 rounded-md transition-colors ${
             activeTab === "form"
               ? "bg-blue-500 text-white"
-              : "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200"
+              : "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
           }`}
         >
           Consumable Form
@@ -171,10 +169,10 @@ export default function ConsumableFormPage() {
         {!isEdit && (
           <button
             onClick={() => setActiveTab("bulk")}
-            className={`flex items-center px-4 py-2 rounded-md transition ${
+            className={`flex items-center px-4 py-2 rounded-md transition-colors ${
               activeTab === "bulk"
                 ? "bg-blue-500 text-white"
-                : "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200"
+                : "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
             }`}
           >
             <span className="mr-2">📥</span>
@@ -197,18 +195,21 @@ export default function ConsumableFormPage() {
               name="itemCode"
               value={formData.itemCode}
               onChange={handleChange}
+              placeholder="Enter item code (e.g., ITM001)"
             />
             <InputField
               label="Item Name"
               name="name"
               value={formData.name}
               onChange={handleChange}
+              placeholder="Enter item name"
             />
             <TextAreaField
               label="Description"
               name="description"
               value={formData.description}
               onChange={handleChange}
+              placeholder="Enter item description and specifications"
             />
             <SelectField
               label="Product Type"
@@ -247,6 +248,7 @@ export default function ConsumableFormPage() {
               value={formData.qtyInHand}
               onChange={handleChange}
               type="number"
+              placeholder="Enter current quantity"
             />
             <InputFieldHSN
               label="HSN Number"
@@ -289,22 +291,22 @@ export default function ConsumableFormPage() {
               <button
                 type="button"
                 onClick={() => navigate("/consumables/view")}
-                className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500"
+                className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading
                   ? isEdit
                     ? "Updating..."
                     : "Creating..."
                   : isEdit
-                  ? "Update"
-                  : "Create"}
+                  ? "Update Consumable"
+                  : "Create Consumable"}
               </button>
             </div>
           </form>
@@ -323,26 +325,39 @@ const InputField = ({
   value,
   onChange,
   type = "text",
+  placeholder = "",
 }: {
   label: string;
   name: string;
   value: any;
   onChange: React.ChangeEventHandler<HTMLInputElement>;
   type?: string;
-}) => (
-  <div>
-    <label className="mb-1 text-gray-700 dark:text-gray-200 font-medium">
-      {label}
-    </label>
-    <input
-      type={type}
-      name={name}
-      value={value}
-      onChange={onChange}
-      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
-    />
-  </div>
-);
+  placeholder?: string;
+}) => {
+  const defaultPlaceholders: Record<string, string> = {
+    itemCode: "Enter item code (e.g., ITM001)",
+    name: "Enter item name",
+    qtyInHand: "Enter current quantity"
+  };
+
+  const fieldPlaceholder = placeholder || defaultPlaceholders[name] || `Enter ${label.toLowerCase()}`;
+
+  return (
+    <div>
+      <label className="mb-1 text-gray-700 dark:text-gray-200 font-medium">
+        {label}
+      </label>
+      <input
+        type={type}
+        name={name}
+        value={value}
+        onChange={onChange}
+        placeholder={fieldPlaceholder}
+        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+      />
+    </div>
+  );
+};
 
 const InputFieldHSN = ({
   label,
@@ -367,8 +382,8 @@ const InputFieldHSN = ({
       maxLength={8}
       pattern="\d{8}"
       inputMode="numeric"
-      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
-      placeholder="Enter 8-digit HSN"
+      placeholder="Enter 8-digit HSN number"
+      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
     />
   </div>
 );
@@ -378,13 +393,15 @@ const TextAreaField = ({
   name,
   value,
   onChange,
+  placeholder = "",
 }: {
   label: string;
   name: string;
   value: any;
   onChange: React.ChangeEventHandler<HTMLTextAreaElement>;
+  placeholder?: string;
 }) => (
-  <div>
+  <div className="md:col-span-2">
     <label className="mb-1 text-gray-700 dark:text-gray-200 font-medium">
       {label}
     </label>
@@ -393,7 +410,8 @@ const TextAreaField = ({
       rows={3}
       value={value}
       onChange={onChange}
-      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
+      placeholder={placeholder || `Enter ${label.toLowerCase()}`}
+      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-vertical"
     />
   </div>
 );
@@ -419,9 +437,9 @@ const SelectField = ({
       name={name}
       value={value}
       onChange={onChange}
-      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
+      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
     >
-      <option value="">Select</option>
+      <option value="">Select {label}</option>
       {options.map((option) => (
         <option key={option.value} value={option.value}>
           {option.label}

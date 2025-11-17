@@ -111,8 +111,6 @@ export const EmployeeForm = ({
     fetchData();
   }, [initialData]);
 
-
-
   const handleStateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedStateCode = e.target.value;
     const selectedState = states.find((s) => s.isoCode === selectedStateCode);
@@ -146,7 +144,6 @@ export const EmployeeForm = ({
       return;
     }
 
-
     // Prepare the data to submit
     const submitData = {
       ...formData,
@@ -155,7 +152,6 @@ export const EmployeeForm = ({
 
     onSubmit(submitData);
   };
-
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -208,7 +204,6 @@ export const EmployeeForm = ({
     }
   };
 
-  
   const inputField = (
     label: string,
     name: string,
@@ -216,7 +211,8 @@ export const EmployeeForm = ({
     required: boolean = true,
     className: string = "w-full",
     min?: number,
-    max?: number
+    max?: number,
+    placeholder?: string
   ) => {
     // Validation rules
     const validations: Record<ValidationField, { isValid: boolean; message: string }> = {
@@ -248,6 +244,23 @@ export const EmployeeForm = ({
 
     const isInvalid = isValidationField(name) ? !validations[name].isValid : false;
     const validationMessage = isValidationField(name) ? validations[name].message : "";
+
+    // Default placeholders based on field name
+    const defaultPlaceholders: Record<string, string> = {
+      emp_id: "Enter employee ID",
+      emp_name: "Enter employee name",
+      age: "Enter age (18-65)",
+      pincode: "Enter 6-digit pincode",
+      acc_holder_name: "Enter account holder name",
+      bank_name: "Enter bank name",
+      acc_no: "Enter account number",
+      ifsc_code: "Enter IFSC code (e.g., SBIN0000123)",
+      aadhar_number: "Enter 12-digit Aadhar number",
+      adress: "Enter complete address",
+      position: "Enter job position"
+    };
+
+    const fieldPlaceholder = placeholder || defaultPlaceholders[name] || `Enter ${label.toLowerCase()}`;
 
     return (
       <div className={`${className} px-3 mb-4`}>
@@ -281,6 +294,7 @@ export const EmployeeForm = ({
           min={min}
           max={max}
           maxLength={name === "ifsc_code" ? 11 : undefined}
+          placeholder={fieldPlaceholder}
           pattern={
             name === "pincode" ? "\\d{6}" :
               name === "ifsc_code" ? "[A-Z]{4}[A-Z0-9]{7}" :
@@ -311,7 +325,6 @@ export const EmployeeForm = ({
   ) => {
     const isShift = name === "shiftcode";
     const isOptional = name === "shiftcode" && !required;
-    console.log(isOptional)
 
     return (
       <div className={`${className} px-3 mb-4`}>
@@ -361,23 +374,38 @@ export const EmployeeForm = ({
           "emp_id",
           "text",
           true,
-          "w-full sm:w-1/2 lg:w-1/3"
+          "w-full sm:w-1/2 lg:w-1/3",
+          undefined,
+          undefined,
+          "EMP001"
         )}
         {inputField(
           "Name",
           "emp_name",
           "text",
           true,
-          "w-full sm:w-1/2 lg:w-1/3"
+          "w-full sm:w-1/2 lg:w-1/3",
+          undefined,
+          undefined,
+          "John Doe"
         )}
 
-        {inputField("Age", "age", "number", true, "w-full sm:w-1/2 lg:w-1/3", 18, 65)}
+        {inputField(
+          "Age", 
+          "age", 
+          "number", 
+          true, 
+          "w-full sm:w-1/2 lg:w-1/3", 
+          18, 
+          65,
+          "25"
+        )}
 
         {selectField(
           "Shift Code",
           "shiftcode",
           shifts,
-          false, // Made this not required
+          false,
           "w-full sm:w-1/2 lg:w-1/3"
         )}
         {selectField(
@@ -456,7 +484,10 @@ export const EmployeeForm = ({
               "pincode",
               "text",
               true,
-              "w-full sm:w-1/2 lg:w-1/3"
+              "w-full sm:w-1/2 lg:w-1/3",
+              undefined,
+              undefined,
+              "560001"
             )}
 
             <div className="w-full px-3 mb-4">
@@ -469,6 +500,7 @@ export const EmployeeForm = ({
                 onChange={handleChange}
                 required
                 rows={3}
+                placeholder="Enter complete address with street, area, and landmark"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
               />
             </div>
@@ -486,28 +518,40 @@ export const EmployeeForm = ({
               "acc_holder_name",
               "text",
               true,
-              "w-full sm:w-1/2 lg:w-1/3"
+              "w-full sm:w-1/2 lg:w-1/3",
+              undefined,
+              undefined,
+              "JOHN DOE"
             )}
             {inputField(
               "Bank Name",
               "bank_name",
               "text",
               true,
-              "w-full sm:w-1/2 lg:w-1/3"
+              "w-full sm:w-1/2 lg:w-1/3",
+              undefined,
+              undefined,
+              "State Bank of India"
             )}
             {inputField(
               "Account Number",
               "acc_no",
               "text",
               true,
-              "w-full sm:w-1/2 lg:w-1/3"
+              "w-full sm:w-1/2 lg:w-1/3",
+              undefined,
+              undefined,
+              "12345678901"
             )}
             {inputField(
               "IFSC Code",
               "ifsc_code",
               "text",
               true,
-              "w-full sm:w-1/2 lg:w-1/3"
+              "w-full sm:w-1/2 lg:w-1/3",
+              undefined,
+              undefined,
+              "SBIN0000123"
             )}
           </div>
         </div>
@@ -536,6 +580,7 @@ export const EmployeeForm = ({
                 pattern="\d{12}"
                 maxLength={12}
                 required
+                placeholder="123456789012"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
               />
               {formData.aadhar_number && formData.aadhar_number.length !== 12 && (
@@ -553,7 +598,7 @@ export const EmployeeForm = ({
                   setFormData((prev) => ({ ...prev, dob: date }))
                 }
                 dateFormat="dd-MM-yyyy"
-                placeholderText="Select date"
+                placeholderText="Select date of birth"
                 maxDate={new Date()}
                 showYearDropdown
                 showMonthDropdown

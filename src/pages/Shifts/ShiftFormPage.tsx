@@ -19,7 +19,6 @@ export default function ShiftFormPage() {
     shift_to_time: "",
   });
   const [loading, setLoading] = useState(false);
-  // Add this state at the top of your component
   const [activeTab, setActiveTab] = useState<"form" | "bulk">("form");
 
   useEffect(() => {
@@ -73,10 +72,10 @@ export default function ShiftFormPage() {
       <div className="mb-6 flex gap-4">
         <button
           onClick={() => setActiveTab("form")}
-          className={`flex items-center px-4 py-2 rounded-md transition ${
+          className={`flex items-center px-4 py-2 rounded-md transition-colors ${
             activeTab === "form"
               ? "bg-blue-500 text-white"
-              : "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200"
+              : "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
           }`}
         >
           Shift Form
@@ -84,10 +83,10 @@ export default function ShiftFormPage() {
         {!isEdit && (
           <button
             onClick={() => setActiveTab("bulk")}
-            className={`flex items-center px-4 py-2 rounded-md transition ${
+            className={`flex items-center px-4 py-2 rounded-md transition-colors ${
               activeTab === "bulk"
                 ? "bg-blue-500 text-white"
-                : "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200"
+                : "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600"
             }`}
           >
             <FaUpload className="mr-2" /> Bulk Upload
@@ -95,69 +94,77 @@ export default function ShiftFormPage() {
         )}
       </div>
       {activeTab === "form" ? (
-        <form onSubmit={handleSubmit} className="grid gap-5">
-          <InputField
-            icon={<FaCode />}
-            label="Shift Code"
-            name="shiftCode"
-            value={formData.shiftCode}
-            onChange={handleChange}
-          />
-          <div className="relative">
+        <>
+          <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">
+            {isEdit ? "Edit Shift" : "Add New Shift"}
+          </h2>
+          <form onSubmit={handleSubmit} className="grid gap-5">
             <InputField
-              icon={<FaClock />}
-              label="From Time"
-              name="shift_from_time"
-              value={formData.shift_from_time}
+              icon={<FaCode />}
+              label="Shift Code"
+              name="shiftCode"
+              value={formData.shiftCode}
               onChange={handleChange}
-              type="time"
-              inputRef={fromTimeRef}
+              placeholder="Enter shift code (e.g., MORNING, NIGHT)"
             />
-            <FaClock
-              className="absolute right-3 top-9 text-gray-400 cursor-pointer"
-              onClick={() => fromTimeRef.current?.showPicker?.()}
-              style={{ pointerEvents: "auto" }}
-            />
-          </div>
-          <div className="relative">
-            <InputField
-              icon={<FaClock />}
-              label="To Time"
-              name="shift_to_time"
-              value={formData.shift_to_time}
-              onChange={handleChange}
-              type="time"
-              inputRef={toTimeRef}
-            />
-            <FaClock
-              className="absolute right-3 top-9 text-gray-400 cursor-pointer"
-              onClick={() => toTimeRef.current?.showPicker?.()}
-              style={{ pointerEvents: "auto" }}
-            />
-          </div>
-          <div className="mt-6 flex justify-end gap-4">
-            <button
-              type="button"
-              onClick={() => navigate("/shifts/view")}
-              className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              {loading
-                ? isEdit
-                  ? "Updating..."
-                  : "Creating..."
-                : isEdit
-                ? "Update"
-                : "Create"}
-            </button>
-          </div>
-        </form>
+            <div className="relative">
+              <InputField
+                icon={<FaClock />}
+                label="From Time"
+                name="shift_from_time"
+                value={formData.shift_from_time}
+                onChange={handleChange}
+                type="time"
+                inputRef={fromTimeRef}
+                placeholder=""
+              />
+              <FaClock
+                className="absolute right-3 top-9 text-gray-400 cursor-pointer hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                onClick={() => fromTimeRef.current?.showPicker?.()}
+                style={{ pointerEvents: "auto" }}
+              />
+            </div>
+            <div className="relative">
+              <InputField
+                icon={<FaClock />}
+                label="To Time"
+                name="shift_to_time"
+                value={formData.shift_to_time}
+                onChange={handleChange}
+                type="time"
+                inputRef={toTimeRef}
+                placeholder=""
+              />
+              <FaClock
+                className="absolute right-3 top-9 text-gray-400 cursor-pointer hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                onClick={() => toTimeRef.current?.showPicker?.()}
+                style={{ pointerEvents: "auto" }}
+              />
+            </div>
+            <div className="mt-6 flex justify-end gap-4">
+              <button
+                type="button"
+                onClick={() => navigate("/shifts/view")}
+                className="px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white rounded-lg hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading
+                  ? isEdit
+                    ? "Updating..."
+                    : "Creating..."
+                  : isEdit
+                  ? "Update Shift"
+                  : "Create Shift"}
+              </button>
+            </div>
+          </form>
+        </>
       ) : (
         <ShiftBulkUpload />
       )}
@@ -174,19 +181,30 @@ const InputField = ({
   onChange,
   type = "text",
   inputRef,
-}: any) => (
-  <div>
-    <label className="flex items-center mb-1 text-gray-700 dark:text-gray-200 font-medium">
-      <span className="mr-2">{icon}</span>
-      {label}
-    </label>
-    <input
-      type={type}
-      name={name}
-      value={value}
-      onChange={onChange}
-      ref={inputRef}
-      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-    />
-  </div>
-);
+  placeholder = "",
+}: any) => {
+  // Default placeholders based on field name
+  const defaultPlaceholders: Record<string, string> = {
+    shiftCode: "Enter shift code (e.g., MORNING, NIGHT)",
+  };
+
+  const fieldPlaceholder = placeholder || defaultPlaceholders[name] || `Enter ${label.toLowerCase()}`;
+
+  return (
+    <div>
+      <label className="flex items-center mb-1 text-gray-700 dark:text-gray-200 font-medium">
+        <span className="mr-2">{icon}</span>
+        {label}
+      </label>
+      <input
+        type={type}
+        name={name}
+        value={value}
+        onChange={onChange}
+        ref={inputRef}
+        placeholder={fieldPlaceholder}
+        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+      />
+    </div>
+  );
+};
