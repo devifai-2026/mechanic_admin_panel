@@ -23,7 +23,9 @@ export const CreateProjectPage = () => {
   const [editData, setEditData] = useState<any | null>(null);
 
   const { id } = useParams<{ id: any }>();
+  
   console.log({ editData });
+  
   useEffect(() => {
     if (id) {
       const fetchEditData = async () => {
@@ -48,14 +50,13 @@ export const CreateProjectPage = () => {
           </h1>
           <button
             onClick={() => navigate("/projects/view")}
-            className="flex items-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+            className="flex items-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white border border-gray-300 dark:border-gray-600 px-4 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
           >
             <span>Back to Projects</span>
           </button>
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md">
-          {/* Tabs */}
           <div className="border-b border-gray-200 dark:border-gray-700">
             <nav className="flex -mb-px">
               <button
@@ -85,7 +86,6 @@ export const CreateProjectPage = () => {
             </nav>
           </div>
 
-          {/* Tab Content */}
           <div className="p-6">
             {activeTab === "form" ? (
               <ProjectCreateForm
@@ -98,21 +98,15 @@ export const CreateProjectPage = () => {
                     } else {
                       await createProject(projectData);
                       toast.success("Project created successfully");
-                      // navigate("/projects/view")
                     }
-                    // navigate("/projects/view");
                   } catch (error) {
                     let errorMessage = "An unexpected error occurred";
-
                     if (error instanceof Error) {
                       errorMessage = error.message;
                     } else if (typeof error === "string") {
                       errorMessage = error;
                     }
-
                     toast.error(errorMessage);
-
-                    // Optionally log the full error for debugging
                     console.error("Project operation failed:", error);
                   }
                 }}
@@ -137,12 +131,12 @@ const BulkUploadSection = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
-      e.target.value = ""; // Clear the input so the same file can be selected again
+      e.target.value = "";
     }
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault(); // Allow drop
+    e.preventDefault();
   };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -191,7 +185,7 @@ const BulkUploadSection = () => {
 
       setFile(null);
       if (fileInputRef.current) {
-        fileInputRef.current.value = ""; // Clear input manually
+        fileInputRef.current.value = "";
       }
     } catch (error) {
       console.error("Upload failed:", error);
@@ -213,7 +207,7 @@ const BulkUploadSection = () => {
           Drag and drop files here
         </h3>
         <p className="text-sm text-gray-500 dark:text-gray-400">or</p>
-        <label className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md">
+        <label className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors">
           <span>Browse files</span>
           <input
             ref={fileInputRef}
@@ -249,7 +243,7 @@ const BulkUploadSection = () => {
                 setFile(null);
                 if (fileInputRef.current) fileInputRef.current.value = "";
               }}
-              className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+              className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors"
             >
               <FaTimes />
             </button>
@@ -261,7 +255,7 @@ const BulkUploadSection = () => {
         <button
           onClick={handleUpload}
           disabled={!file || isUploading}
-          className={`px-4 py-2 rounded-md text-white flex items-center ${
+          className={`px-4 py-2 rounded-md text-white flex items-center transition-colors ${
             !file || isUploading
               ? "bg-blue-400 dark:bg-blue-600 cursor-not-allowed"
               : "bg-blue-600 hover:bg-blue-700"

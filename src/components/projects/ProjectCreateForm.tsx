@@ -3,10 +3,12 @@ import { MultiSelect } from "../../components/projects/MultiSelect";
 import { fetchRevenues } from "../../apis/revenueApi";
 import { fetchEquipments } from "../../apis/equipmentApi";
 import { fetchCustomers } from "../../apis/customerApi";
-// import { fetchEmployees } from "../../apis/employeeApi";
 import { fetchStores } from "../../apis/storeApi";
 import { Customer } from "../../types/customerTypes";
 import Select from "react-select";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import { FaCalendarAlt } from "react-icons/fa";
 
 type ProjectFormProps = {
   onClose: () => void;
@@ -24,11 +26,9 @@ type FormData = {
   projectNo: string;
   customer: string;
   orderNo: string;
-  contractStartDate: string;
-  contractEndDate: string; // ✅ Added
-  // contractTenure: string;
+  contractStartDate: Date | null;
+  contractEndDate: Date | null;
   revenueMaster: string[];
-  // equipments: string[];
   staff: string[];
   storeLocations: string[];
 };
@@ -43,11 +43,9 @@ export const ProjectCreateForm: React.FC<ProjectFormProps> = ({
     projectNo: "",
     customer: "",
     orderNo: "",
-    contractStartDate: "",
-    contractEndDate: "", // ✅ Added
-    // contractTenure: "",
+    contractStartDate: null,
+    contractEndDate: null,
     revenueMaster: [],
-    // equipments: [],
     staff: [],
     storeLocations: [],
   });
@@ -55,10 +53,10 @@ export const ProjectCreateForm: React.FC<ProjectFormProps> = ({
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [revenueOptions, setRevenueOptions] = useState<Option[]>([]);
   const [equipmentOptions, setEquipmentOptions] = useState<Option[]>([]);
-  // const [employeeOptions, setEmployeeOptions] = useState<Option[]>([]);
   const [storeOptions, setStoreOptions] = useState<Option[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   const customerOptions = customers.map((cust) => ({
     value: cust.id,
@@ -66,8 +64,6 @@ export const ProjectCreateForm: React.FC<ProjectFormProps> = ({
   }));
 
   // Initialize form data when initialData changes
-
-  console.log({ initialData });
   useEffect(() => {
     if (initialData) {
       setFormData({
@@ -76,15 +72,11 @@ export const ProjectCreateForm: React.FC<ProjectFormProps> = ({
         orderNo: initialData.order_no || "",
         contractStartDate: initialData.contract_start_date
           ? new Date(initialData.contract_start_date)
-              .toISOString()
-              .split("T")[0]
-          : "",
-        contractEndDate: initialData.contract_end_date // ✅ Added
-          ? new Date(initialData.contract_end_date).toISOString().split("T")[0]
-          : "",
-        // contractTenure: initialData.contract_tenure || "",
+          : null,
+        contractEndDate: initialData.contract_end_date
+          ? new Date(initialData.contract_end_date)
+          : null,
         revenueMaster: initialData.revenues?.map((r: any) => r.id) || [],
-        // equipments: initialData.equipments?.map((e: any) => e.id) || [],
         staff: initialData.staff?.map((s: any) => s.id) || [],
         storeLocations:
           initialData.store_locations?.map((s: any) => s.id) || [],
@@ -100,19 +92,12 @@ export const ProjectCreateForm: React.FC<ProjectFormProps> = ({
         const [customersData, storeData, revenues, equipments] =
           await Promise.all([
             fetchCustomers(),
-            // fetchEmployees(),
             fetchStores(),
             fetchRevenues(),
             fetchEquipments(),
           ]);
 
         setCustomers(customersData);
-        // setEmployeeOptions(
-        //   employeesData.map((emp: any) => ({
-        //     value: emp.id,
-        //     text: emp.emp_name || "Unnamed Employee",
-        //   }))
-        // );
         setStoreOptions(
           storeData.map((store: any) => ({
             value: store.id,
@@ -125,7 +110,6 @@ export const ProjectCreateForm: React.FC<ProjectFormProps> = ({
             text: `${rev.revenue_code}`,
           }))
         );
-        console.log({ equipments });
         setEquipmentOptions(
           equipments.map((eq: any) => ({
             value: eq.id,
@@ -142,37 +126,90 @@ export const ProjectCreateForm: React.FC<ProjectFormProps> = ({
     fetchData();
   }, []);
 
-  console.log({ equipmentOptions });
-  console.log({ revenueOptions });
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: ""
+      }));
+    }
+  };
+
+  const handleDateChange = (date: Date | null, field: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: date
+    }));
+    
+    // Clear error when user selects a date
+    if (errors[field]) {
+      setErrors(prev => ({
+        ...prev,
+        [field]: ""
+      }));
+    }
+
+    // Validate end date if start date is changed and end date exists
+    if (field === "contractStartDate" && formData.contractEndDate && date && date > formData.contractEndDate) {
+      setErrors(prev => ({
+        ...prev,
+        contractEndDate: "End date cannot be before start date"
+      }));
+    }
   };
 
   const handleMultiSelectChange = (name: keyof FormData, values: string[]) => {
     setFormData((prev) => ({ ...prev, [name]: values }));
   };
 
+  const validateForm = () => {
+    const newErrors: { [key: string]: string } = {};
+
+    if (!formData.projectNo.trim()) {
+      newErrors.projectNo = "Project number is required";
+    }
+    if (!formData.contractStartDate) {
+      newErrors.contractStartDate = "Contract start date is required";
+    }
+    if (formData.contractStartDate && formData.contractEndDate && 
+        formData.contractStartDate > formData.contractEndDate) {
+      newErrors.contractEndDate = "End date cannot be before start date";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // if (formData.staff.length < 6) {
-    //   alert("Please select at least 6 staff members.");
-    //   return;
-    // }
+    
+    if (!validateForm()) {
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      await onSubmit(formData);
+      // Format dates for API
+      const submitData = {
+        ...formData,
+        contractStartDate: formData.contractStartDate ? formData.contractStartDate.toISOString() : null,
+        contractEndDate: formData.contractEndDate ? formData.contractEndDate.toISOString() : null,
+      };
+
+      await onSubmit(submitData);
       setFormData({
         projectNo: "",
         customer: "",
         orderNo: "",
-        contractStartDate: "",
-        contractEndDate: "", // ✅ Added
-        // contractTenure: "",
+        contractStartDate: null,
+        contractEndDate: null,
         revenueMaster: [],
-        // equipments: [],
         staff: [],
         storeLocations: [],
       });
@@ -190,7 +227,26 @@ export const ProjectCreateForm: React.FC<ProjectFormProps> = ({
     }));
   };
 
-  // const tenureOptions = ["3 months", "6 months", "12 months"];
+  // Custom Input component with calendar icon
+  const CustomDateInput = React.forwardRef(({ value, onClick, onChange, placeholder }: any, ref: any) => (
+    <div className="relative">
+      <input
+        type="text"
+        className="w-full border rounded-lg px-4 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white border-gray-300 dark:border-gray-600"
+        value={value}
+        onClick={onClick}
+        onChange={onChange}
+        placeholder={placeholder}
+        ref={ref}
+        readOnly
+      />
+      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+        <FaCalendarAlt className="text-gray-400 dark:text-gray-500" />
+      </div>
+    </div>
+  ));
+
+  CustomDateInput.displayName = 'CustomDateInput';
 
   if (isLoading) {
     return (
@@ -212,11 +268,18 @@ export const ProjectCreateForm: React.FC<ProjectFormProps> = ({
             name="projectNo"
             value={formData.projectNo}
             onChange={handleChange}
-            className="w-full border rounded-lg px-4 py-2"
+            className={`w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white ${
+              errors.projectNo 
+                ? "border-red-500 dark:border-red-400" 
+                : "border-gray-300 dark:border-gray-600"
+            }`}
             placeholder="PRJ-001"
             required
             disabled={isEditMode}
           />
+          {errors.projectNo && (
+            <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.projectNo}</p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -228,7 +291,7 @@ export const ProjectCreateForm: React.FC<ProjectFormProps> = ({
             name="orderNo"
             value={formData.orderNo}
             onChange={handleChange}
-            className="w-full border rounded-lg px-4 py-2"
+            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
             placeholder="Order Number"
           />
         </div>
@@ -247,54 +310,84 @@ export const ProjectCreateForm: React.FC<ProjectFormProps> = ({
             placeholder="Select Customer"
             className="react-select-container"
             classNamePrefix="react-select"
+            styles={{
+              control: (base) => ({
+                ...base,
+                backgroundColor: 'rgb(55 65 81)',
+                borderColor: 'rgb(75 85 99)',
+                color: 'white'
+              }),
+              menu: (base) => ({
+                ...base,
+                backgroundColor: 'rgb(55 65 81)',
+                color: 'white'
+              }),
+              option: (base, state) => ({
+                ...base,
+                backgroundColor: state.isFocused ? 'rgb(75 85 99)' : 'rgb(55 65 81)',
+                color: 'white'
+              }),
+              singleValue: (base) => ({
+                ...base,
+                color: 'white'
+              }),
+              input: (base) => ({
+                ...base,
+                color: 'white'
+              })
+            }}
           />
         </div>
 
         <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Contract Start Date
+            Contract Start Date<span className="text-red-500"> *</span>
           </label>
-          <input
-            type="date"
-            name="contractStartDate"
-            value={formData.contractStartDate}
-            onChange={handleChange}
-            className="w-full border rounded-lg px-4 py-2"
+          <DatePicker
+            selected={formData.contractStartDate}
+            onChange={(date) => handleDateChange(date, "contractStartDate")}
+            className={`w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white ${
+              errors.contractStartDate 
+                ? "border-red-500 dark:border-red-400" 
+                : "border-gray-300 dark:border-gray-600"
+            }`}
+            dateFormat="MMMM d, yyyy"
+            placeholderText="Select start date"
+            isClearable
+            showYearDropdown
+            scrollableYearDropdown
             required
+            customInput={<CustomDateInput placeholder="Select start date" />}
           />
+          {errors.contractStartDate && (
+            <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.contractStartDate}</p>
+          )}
         </div>
+
         <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
             Contract End Date
           </label>
-          <input
-            type="date"
-            name="contractEndDate"
-            value={formData.contractEndDate}
-            onChange={handleChange}
-            className="w-full border rounded-lg px-4 py-2"
+          <DatePicker
+            selected={formData.contractEndDate}
+            onChange={(date) => handleDateChange(date, "contractEndDate")}
+            className={`w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white ${
+              errors.contractEndDate 
+                ? "border-red-500 dark:border-red-400" 
+                : "border-gray-300 dark:border-gray-600"
+            }`}
+            dateFormat="MMMM d, yyyy"
+            placeholderText="Select end date"
+            isClearable
+            showYearDropdown
+            scrollableYearDropdown
+            minDate={formData.contractStartDate || undefined}
+            customInput={<CustomDateInput placeholder="Select end date" />}
           />
+          {errors.contractEndDate && (
+            <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.contractEndDate}</p>
+          )}
         </div>
-
-        {/* <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-            Contract Tenure
-          </label>
-          <select
-            name="contractTenure"
-            value={formData.contractTenure}
-            onChange={handleChange}
-            className="w-full border rounded-lg px-4 py-2"
-            required
-          >
-            <option value="">Select Tenure</option>
-            {tenureOptions.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-        </div> */}
       </div>
 
       <div className="space-y-2">
@@ -310,31 +403,6 @@ export const ProjectCreateForm: React.FC<ProjectFormProps> = ({
           }
         />
       </div>
-
-      {/* <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-          Equipments
-        </label>
-        <MultiSelect
-          label="Equipments"
-          options={equipmentOptions}
-          defaultSelected={formData.equipments}
-          onChange={(values) => handleMultiSelectChange("equipments", values)}
-        />
-      </div> */}
-
-      {/* <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-          Staff <span className="text-xs text-gray-500">(Select at least 6)</span>
-        </label>
-        <MultiSelect
-          label="Staff"
-          options={employeeOptions}
-          defaultSelected={formData.staff}
-          onChange={(values) => handleMultiSelectChange("staff", values)}
-          className="mb-4"
-        />
-      </div> */}
 
       <div className="space-y-2">
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -354,7 +422,7 @@ export const ProjectCreateForm: React.FC<ProjectFormProps> = ({
         <button
           type="button"
           onClick={onClose}
-          className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          className="px-6 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300"
           disabled={isSubmitting}
         >
           Cancel
@@ -362,7 +430,7 @@ export const ProjectCreateForm: React.FC<ProjectFormProps> = ({
         <button
           type="submit"
           disabled={isSubmitting}
-          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-blue-400"
+          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-blue-400 disabled:cursor-not-allowed"
         >
           {isSubmitting ? (
             <span className="flex items-center justify-center">
