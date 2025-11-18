@@ -14,12 +14,12 @@ import {
   FaTag,
   FaCalendarAlt,
   FaUpload,
+  FaTimes,
 } from "react-icons/fa";
 import { GoNumber } from "react-icons/go";
 import { fetchEquipmentGroups } from "../../apis/equipmentGroupApi";
 import EquipmentBulkUpload from "./EquipmentBulkUpload";
 import { fetchProjects } from "../../apis/projectsApi";
-import { MultiSelect } from "../../components/projects/MultiSelect";
 import { getAllOEMs } from "../../apis/oemApi";
 
 const uploadToCloudinary = async (file: File): Promise<string> => {
@@ -37,6 +37,136 @@ const uploadToCloudinary = async (file: File): Promise<string> => {
   return response.data.secure_url;
 };
 
+// Reusable FilterableMultiSelect Component
+interface FilterableMultiSelectProps {
+  label: string;
+  options: { value: string; text: string }[];
+  selectedValues: string[];
+  onChange: (values: string[]) => void;
+  placeholder?: string;
+}
+
+const FilterableMultiSelect: React.FC<FilterableMultiSelectProps> = ({
+  label,
+  options,
+  selectedValues,
+  onChange,
+  placeholder = "Select options",
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Filter available options (exclude already selected)
+  const availableOptions = options.filter(
+    (opt) => !selectedValues.includes(opt.value)
+  );
+
+  const filteredOptions = availableOptions.filter((opt) =>
+    opt.text.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handleSelect = (value: string) => {
+    onChange([...selectedValues, value]);
+    setSearchTerm("");
+  };
+
+  const handleRemove = (value: string) => {
+    onChange(selectedValues.filter((v) => v !== value));
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Get selected option labels
+  const selectedLabels = options
+    .filter((opt) => selectedValues.includes(opt.value))
+    .map((opt) => ({ value: opt.value, text: opt.text }));
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <label className="block font-medium text-gray-700 dark:text-gray-200 mb-2">
+        {label}
+      </label>
+
+      {/* Selected Items Display */}
+      <div className="w-full min-h-10 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 flex flex-wrap gap-2 items-start cursor-text"
+        onClick={() => setIsOpen(true)}
+      >
+        {selectedLabels.length > 0 ? (
+          selectedLabels.map((item) => (
+            <div
+              key={item.value}
+              className="bg-blue-500 text-white px-3 py-1 rounded-full text-sm flex items-center gap-2"
+            >
+              {item.text}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRemove(item.value);
+                }}
+                className="hover:bg-blue-600 rounded-full p-0.5"
+              >
+                <FaTimes size={12} />
+              </button>
+            </div>
+          ))
+        ) : (
+          <span className="text-gray-400">{placeholder}</span>
+        )}
+
+        {/* Search Input */}
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setIsOpen(true);
+          }}
+          onFocus={() => setIsOpen(true)}
+          placeholder={selectedLabels.length === 0 ? placeholder : "Search..."}
+          className="flex-1 min-w-32 outline-none bg-transparent text-gray-800 dark:text-white placeholder-gray-400"
+        />
+      </div>
+
+      {/* Dropdown Menu */}
+      {isOpen && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg z-10 max-h-48 overflow-y-auto">
+          {filteredOptions.length > 0 ? (
+            filteredOptions.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => handleSelect(option.value)}
+                className="w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-blue-900 text-gray-800 dark:text-white transition-colors border-b border-gray-100 dark:border-gray-600 last:border-b-0"
+              >
+                {option.text}
+              </button>
+            ))
+          ) : (
+            <div className="px-4 py-2 text-gray-500 dark:text-gray-400 text-center">
+              No available options
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function EquipmentFormPage() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -52,7 +182,7 @@ export default function EquipmentFormPage() {
     { value: string; text: string }[]
   >([]);
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
-  const [selectedGroup, setSelectedGroup] = useState<string>("");
+  const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
 
   const [formData, setFormData] = useState({
     equipmentName: "",
@@ -131,7 +261,12 @@ export default function EquipmentFormPage() {
                 : [data.project_tag.site || data.project_tag]
               : []
           );
-          setSelectedGroup(data.equipment_group_id || "");
+          setSelectedGroups(data.equipment_group_id 
+            ? Array.isArray(data.equipment_group_id) 
+              ? data.equipment_group_id 
+              : [data.equipment_group_id]
+            : []
+          );
         })
         .catch(() => toast.error("Failed to load equipment"))
         .finally(() => setLoading(false));
@@ -158,19 +293,20 @@ export default function EquipmentFormPage() {
     }
   };
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoading(true);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
 
-  // Validate HSN number (must be 8 digits if provided)
-  if (formData.hsn_number !== 0 && formData.hsn_number.toString().length !== 8) {
-    toast.error("HSN number must be exactly 8 digits");
-    setLoading(false);
-    return;
-  }
+    if (
+      formData.hsn_number !== 0 &&
+      formData.hsn_number.toString().length !== 8
+    ) {
+      toast.error("HSN number must be exactly 8 digits");
+      setLoading(false);
+      return;
+    }
 
     try {
-      // Upload equipment manual if it's a File
       const equipmentManualUrl =
         typeof formData.equipmentManual === "object"
           ? await uploadToCloudinary(formData.equipmentManual)
@@ -186,14 +322,7 @@ const handleSubmit = async (e: React.FormEvent) => {
           ? await uploadToCloudinary(formData.otherLog)
           : formData.otherLog;
 
-      // Map selectedProjects (array of IDs) to a single ProjectTag object (take the first if multiple)
-      const selectedProjectTag = projectTags
-        .filter((proj) => selectedProjects.includes(proj.value))
-        .map((proj) => ({
-          project_no: proj.text,
-          site: proj.value,
-        }))[0] || { project_no: "", site: "" };
-
+      // Build payload with multiple project tags and equipment groups
       const payload = {
         equipment_name: formData.equipmentName,
         equipment_sr_no: formData.serialNo,
@@ -202,10 +331,10 @@ const handleSubmit = async (e: React.FormEvent) => {
         oem: formData.oem,
         purchase_cost: Number(formData.purchaseCost),
         equipment_manual: equipmentManualUrl,
-        maintenance_log: maintenanceLogUrl, // Ensure object type
-        other_log: otherLogUrl, // Ensure object type
-        project_tag: selectedProjectTag?.site,
-        equipment_group_id: selectedGroup,
+        maintenance_log: maintenanceLogUrl,
+        other_log: otherLogUrl,
+        project_tags: selectedProjects, // Array of selected project IDs
+        equipment_group_ids: selectedGroups, // Array of selected group IDs
         hsn_number: formData.hsn_number,
       };
 
@@ -323,26 +452,28 @@ const handleSubmit = async (e: React.FormEvent) => {
                 styles={{
                   control: (base) => ({
                     ...base,
-                    backgroundColor: 'rgb(55 65 81)',
-                    borderColor: 'rgb(75 85 99)',
+                    backgroundColor: "rgb(55 65 81)",
+                    borderColor: "rgb(75 85 99)",
                   }),
                   menu: (base) => ({
                     ...base,
-                    backgroundColor: 'rgb(55 65 81)',
+                    backgroundColor: "rgb(55 65 81)",
                   }),
                   option: (base, state) => ({
                     ...base,
-                    backgroundColor: state.isFocused ? 'rgb(75 85 99)' : 'rgb(55 65 81)',
-                    color: 'white'
+                    backgroundColor: state.isFocused
+                      ? "rgb(75 85 99)"
+                      : "rgb(55 65 81)",
+                    color: "white",
                   }),
                   singleValue: (base) => ({
                     ...base,
-                    color: 'white'
+                    color: "white",
                   }),
                   input: (base) => ({
                     ...base,
-                    color: 'white'
-                  })
+                    color: "white",
+                  }),
                 }}
               />
             </div>
@@ -357,39 +488,42 @@ const handleSubmit = async (e: React.FormEvent) => {
               placeholder="Enter purchase cost in USD"
             />
 
-           <div>
-  <label className="flex items-center mb-1 text-gray-700 dark:text-gray-200 font-medium">
-    <span className="mr-2">
-      <GoNumber />
-    </span>
-    HSN Number
-  </label>
-  <input
-    type="text"
-    name="hsn_number"
-    value={formData.hsn_number === 0 ? "" : formData.hsn_number}
-    onChange={(e) => {
-      const value = e.target.value.replace(/\D/g, "");
-      if (value.length <= 8) {
-        setFormData((prev) => ({
-          ...prev,
-          hsn_number: value ? Number(value) : 0,
-        }));
-      }
-    }}
-    className={`w-full px-3 py-2 border ${
-      formData.hsn_number !== 0 && formData.hsn_number.toString().length !== 8
-        ? "border-red-500"
-        : "border-gray-300"
-    } dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500`}
-    placeholder="Enter 8-digit HSN number"
-  />
-  {formData.hsn_number !== 0 && formData.hsn_number.toString().length !== 8 && (
-    <p className="text-red-500 text-sm mt-1">
-      HSN number must be exactly 8 digits
-    </p>
-  )}
-</div>
+            <div>
+              <label className="flex items-center mb-1 text-gray-700 dark:text-gray-200 font-medium">
+                <span className="mr-2">
+                  <GoNumber />
+                </span>
+                HSN Number
+              </label>
+              <input
+                type="text"
+                name="hsn_number"
+                value={formData.hsn_number === 0 ? "" : formData.hsn_number}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, "");
+                  if (value.length <= 8) {
+                    setFormData((prev) => ({
+                      ...prev,
+                      hsn_number: value ? Number(value) : 0,
+                    }));
+                  }
+                }}
+                className={`w-full px-3 py-2 border ${
+                  formData.hsn_number !== 0 &&
+                  formData.hsn_number.toString().length !== 8
+                    ? "border-red-500"
+                    : "border-gray-300"
+                } dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                placeholder="Enter 8-digit HSN number"
+              />
+              {formData.hsn_number !== 0 &&
+                formData.hsn_number.toString().length !== 8 && (
+                  <p className="text-red-500 text-sm mt-1">
+                    HSN number must be exactly 8 digits
+                  </p>
+                )}
+            </div>
+
             <FileField
               icon={<FaCogs />}
               label="Equipment Manual (PDF only)"
@@ -410,25 +544,22 @@ const handleSubmit = async (e: React.FormEvent) => {
             />
 
             <div className="md:col-span-2">
-              <MultiSelect
-                label="Project Tag"
+              <FilterableMultiSelect
+                label="Project Tags"
                 options={projectTags}
-                defaultSelected={selectedProjects}
-                onChange={(values: string[]) => setSelectedProjects(values)}
+                selectedValues={selectedProjects}
+                onChange={setSelectedProjects}
+                placeholder="Select projects..."
               />
             </div>
 
             <div className="md:col-span-2">
-              <label className="block font-medium text-gray-700 dark:text-gray-200 mb-1">
-                Equipment Group
-              </label>
-              <MultiSelect
-                label="Select Equipment Group"
+              <FilterableMultiSelect
+                label="Equipment Groups"
                 options={equipmentGroups}
-                defaultSelected={selectedGroup ? [selectedGroup] : []}
-                onChange={(values: string[]) =>
-                  setSelectedGroup(values[0] || "")
-                }
+                selectedValues={selectedGroups}
+                onChange={setSelectedGroups}
+                placeholder="Select equipment groups..."
               />
             </div>
           </div>
@@ -474,7 +605,6 @@ const InputField = ({
   inputRef,
   placeholder = "",
 }: any) => {
-  // Default placeholders based on field name
   const defaultPlaceholders: Record<string, string> = {
     equipmentName: "Enter equipment name (e.g., Excavator, Crane)",
     serialNo: "Enter serial number",
@@ -482,7 +612,8 @@ const InputField = ({
     purchaseCost: "Enter purchase cost in USD",
   };
 
-  const fieldPlaceholder = placeholder || defaultPlaceholders[name] || `Enter ${label.toLowerCase()}`;
+  const fieldPlaceholder =
+    placeholder || defaultPlaceholders[name] || `Enter ${label.toLowerCase()}`;
 
   return (
     <div>

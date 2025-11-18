@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { MultiSelect } from "../../components/projects/MultiSelect";
 import { fetchRevenues } from "../../apis/revenueApi";
 import { fetchCustomers } from "../../apis/customerApi";
@@ -7,7 +7,7 @@ import { Customer } from "../../types/customerTypes";
 import Select from "react-select";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { FaCalendarAlt } from "react-icons/fa";
+import { FaCalendarAlt, FaTimes } from "react-icons/fa";
 
 type ProjectFormProps = {
   onClose: () => void;
@@ -30,6 +30,137 @@ type FormData = {
   revenueMaster: string[];
   staff: string[];
   storeLocations: string[];
+};
+
+// Reusable FilterableMultiSelect Component (same as in EquipmentFormPage)
+interface FilterableMultiSelectProps {
+  label: string;
+  options: { value: string; text: string }[];
+  selectedValues: string[];
+  onChange: (values: string[]) => void;
+  placeholder?: string;
+}
+
+const FilterableMultiSelect: React.FC<FilterableMultiSelectProps> = ({
+  label,
+  options,
+  selectedValues,
+  onChange,
+  placeholder = "Select options",
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Filter available options (exclude already selected)
+  const availableOptions = options.filter(
+    (opt) => !selectedValues.includes(opt.value)
+  );
+
+  const filteredOptions = availableOptions.filter((opt) =>
+    opt.text.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handleSelect = (value: string) => {
+    onChange([...selectedValues, value]);
+    setSearchTerm("");
+  };
+
+  const handleRemove = (value: string) => {
+    onChange(selectedValues.filter((v) => v !== value));
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Get selected option labels
+  const selectedLabels = options
+    .filter((opt) => selectedValues.includes(opt.value))
+    .map((opt) => ({ value: opt.value, text: opt.text }));
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <label className="block font-medium text-gray-700 dark:text-gray-200 mb-2">
+        {label}
+      </label>
+
+      {/* Selected Items Display */}
+      <div 
+        className="w-full min-h-10 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 flex flex-wrap gap-2 items-start cursor-text"
+        onClick={() => setIsOpen(true)}
+      >
+        {selectedLabels.length > 0 ? (
+          selectedLabels.map((item) => (
+            <div
+              key={item.value}
+              className="bg-blue-500 text-white px-3 py-1 rounded-full text-sm flex items-center gap-2"
+            >
+              {item.text}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRemove(item.value);
+                }}
+                className="hover:bg-blue-600 rounded-full p-0.5"
+              >
+                <FaTimes size={12} />
+              </button>
+            </div>
+          ))
+        ) : (
+          <span className="text-gray-400">{placeholder}</span>
+        )}
+
+        {/* Search Input */}
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setIsOpen(true);
+          }}
+          onFocus={() => setIsOpen(true)}
+          placeholder={selectedLabels.length === 0 ? placeholder : "Search..."}
+          className="flex-1 min-w-32 outline-none bg-transparent text-gray-800 dark:text-white placeholder-gray-400"
+        />
+      </div>
+
+      {/* Dropdown Menu */}
+      {isOpen && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg z-10 max-h-48 overflow-y-auto">
+          {filteredOptions.length > 0 ? (
+            filteredOptions.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => handleSelect(option.value)}
+                className="w-full text-left px-4 py-2 hover:bg-blue-100 dark:hover:bg-blue-900 text-gray-800 dark:text-white transition-colors border-b border-gray-100 dark:border-gray-600 last:border-b-0"
+              >
+                {option.text}
+              </button>
+            ))
+          ) : (
+            <div className="px-4 py-2 text-gray-500 dark:text-gray-400 text-center">
+              No available options
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 };
 
 export const ProjectCreateForm: React.FC<ProjectFormProps> = ({
@@ -92,7 +223,6 @@ export const ProjectCreateForm: React.FC<ProjectFormProps> = ({
             fetchCustomers(),
             fetchStores(),
             fetchRevenues(),
-            // Removed fetchEquipments since it's not used
           ]);
 
         setCustomers(customersData);
@@ -382,31 +512,25 @@ export const ProjectCreateForm: React.FC<ProjectFormProps> = ({
         </div>
       </div>
 
+      {/* Updated Revenues Section with FilterableMultiSelect */}
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-          Revenues
-        </label>
-        <MultiSelect
+        <FilterableMultiSelect
           label="Revenues"
           options={revenueOptions}
-          defaultSelected={formData.revenueMaster}
-          onChange={(values) =>
-            handleMultiSelectChange("revenueMaster", values)
-          }
+          selectedValues={formData.revenueMaster}
+          onChange={(values) => handleMultiSelectChange("revenueMaster", values)}
+          placeholder="Select revenues..."
         />
       </div>
 
+      {/* Updated Store Locations Section with FilterableMultiSelect */}
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-          Store Locations
-        </label>
-        <MultiSelect
+        <FilterableMultiSelect
           label="Store Locations"
           options={storeOptions}
-          defaultSelected={formData.storeLocations}
-          onChange={(values) =>
-            handleMultiSelectChange("storeLocations", values)
-          }
+          selectedValues={formData.storeLocations}
+          onChange={(values) => handleMultiSelectChange("storeLocations", values)}
+          placeholder="Select store locations..."
         />
       </div>
 
