@@ -158,15 +158,16 @@ export default function EquipmentFormPage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
 
-    // Validate HSN number (must be 8 digits)
-    if (formData.hsn_number.toString().length !== 8) {
-      toast.error("HSN number must be exactly 8 digits");
-      return;
-    }
+  // Validate HSN number (must be 8 digits if provided)
+  if (formData.hsn_number !== 0 && formData.hsn_number.toString().length !== 8) {
+    toast.error("HSN number must be exactly 8 digits");
+    setLoading(false);
+    return;
+  }
 
     try {
       // Upload equipment manual if it's a File
@@ -356,42 +357,39 @@ export default function EquipmentFormPage() {
               placeholder="Enter purchase cost in USD"
             />
 
-            <div>
-              <label className="flex items-center mb-1 text-gray-700 dark:text-gray-200 font-medium">
-                <span className="mr-2">
-                  <GoNumber />
-                </span>
-                HSN Number
-              </label>
-              <input
-                type="text"
-                name="hsn_number"
-                value={formData.hsn_number === 0 ? "" : formData.hsn_number}
-                onChange={(e) => {
-                  const value = e.target.value.replace(/\D/g, "");
-                  if (value.length <= 8) {
-                    setFormData((prev) => ({
-                      ...prev,
-                      hsn_number: value ? Number(value) : 0,
-                    }));
-                  }
-                }}
-                className={`w-full px-3 py-2 border ${
-                  formData.hsn_number.toString().length > 0 &&
-                  formData.hsn_number.toString().length !== 8
-                    ? "border-red-500"
-                    : "border-gray-300"
-                } dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                placeholder="Enter 8-digit HSN number"
-              />
-              {formData.hsn_number.toString().length > 0 &&
-                formData.hsn_number.toString().length !== 8 && (
-                  <p className="text-red-500 text-sm mt-1">
-                    HSN number must be exactly 8 digits
-                  </p>
-                )}
-            </div>
-
+           <div>
+  <label className="flex items-center mb-1 text-gray-700 dark:text-gray-200 font-medium">
+    <span className="mr-2">
+      <GoNumber />
+    </span>
+    HSN Number
+  </label>
+  <input
+    type="text"
+    name="hsn_number"
+    value={formData.hsn_number === 0 ? "" : formData.hsn_number}
+    onChange={(e) => {
+      const value = e.target.value.replace(/\D/g, "");
+      if (value.length <= 8) {
+        setFormData((prev) => ({
+          ...prev,
+          hsn_number: value ? Number(value) : 0,
+        }));
+      }
+    }}
+    className={`w-full px-3 py-2 border ${
+      formData.hsn_number !== 0 && formData.hsn_number.toString().length !== 8
+        ? "border-red-500"
+        : "border-gray-300"
+    } dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500`}
+    placeholder="Enter 8-digit HSN number"
+  />
+  {formData.hsn_number !== 0 && formData.hsn_number.toString().length !== 8 && (
+    <p className="text-red-500 text-sm mt-1">
+      HSN number must be exactly 8 digits
+    </p>
+  )}
+</div>
             <FileField
               icon={<FaCogs />}
               label="Equipment Manual (PDF only)"
