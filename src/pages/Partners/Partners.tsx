@@ -20,6 +20,8 @@ export const Partners = () => {
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortField, setSortField] = useState<string>("");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -48,16 +50,55 @@ export const Partners = () => {
     fetchAndSetPartners();
   }, []);
 
+  // Sort partners
+  const sortPartners = (partners: any[]) => {
+    if (!sortField) return partners;
+
+    return [...partners].sort((a, b) => {
+      let aValue = a[sortField];
+      let bValue = b[sortField];
+
+      // Handle string fields with case-insensitive sorting
+      if (typeof aValue === "string" && typeof bValue === "string") {
+        aValue = aValue.toLowerCase();
+        bValue = bValue.toLowerCase();
+      }
+
+      // Handle boolean field for isCustomer
+      if (sortField === "isCustomer") {
+        aValue = aValue ? 1 : 0;
+        bValue = bValue ? 1 : 0;
+      }
+
+      // Handle numeric fields
+      if (sortField === "pincode") {
+        aValue = Number(aValue) || 0;
+        bValue = Number(bValue) || 0;
+      }
+
+      if (aValue < bValue) {
+        return sortDirection === "asc" ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortDirection === "asc" ? 1 : -1;
+      }
+      return 0;
+    });
+  };
+
+  // Filtered and sorted data
   const filteredPartners = partners.filter((partner) =>
     partner.partner_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const sortedPartners = sortPartners(filteredPartners);
 
   const {
     currentPage,
     setCurrentPage,
     totalPages,
     paginatedData: paginatedPartners,
-  } = usePagination(filteredPartners, rowsPerPage);
+  } = usePagination(sortedPartners, rowsPerPage);
 
   const exportToExcel = (data: any[]) => {
     if (!data || data.length === 0) {
@@ -78,6 +119,40 @@ export const Partners = () => {
     XLSX.utils.book_append_sheet(workbook, worksheet, "Partners");
 
     XLSX.writeFile(workbook, "partners.xlsx");
+  };
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      // Toggle direction if same field
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // Set new field with ascending direction
+      setSortField(field);
+      setSortDirection("asc");
+    }
+    setSortMenuOpen(false);
+    setMoreDropdownOpen(false);
+    
+    const fieldName = getFieldDisplayName(field);
+    const direction = sortField === field ? (sortDirection === "asc" ? "descending" : "ascending") : "ascending";
+    toast.info(`Sorted by ${fieldName} ${direction}`);
+  };
+
+  const getFieldDisplayName = (field: string) => {
+    const fieldNames: { [key: string]: string } = {
+      partner_name: "Name",
+      partner_gst: "GST",
+      state: "State",
+      city: "City",
+      pincode: "Pincode",
+      isCustomer: "Customer Status"
+    };
+    return fieldNames[field] || field;
+  };
+
+  const getSortIndicator = (field: string) => {
+    if (sortField !== field) return null;
+    return sortDirection === "asc" ? " ↑" : " ↓";
   };
 
   useEffect(() => {
@@ -187,23 +262,39 @@ export const Partners = () => {
                       <div className="absolute right-full top-0 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-40 py-1">
                         <button
                           className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
-                          onClick={() => {
-                            setMoreDropdownOpen(false);
-                            setSortMenuOpen(false);
-                            toast.info("Sort by Name clicked");
-                          }}
+                          onClick={() => handleSort("partner_name")}
                         >
-                          Sort by Name
+                          Sort by Name{getSortIndicator("partner_name")}
                         </button>
                         <button
                           className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
-                          onClick={() => {
-                            setMoreDropdownOpen(false);
-                            setSortMenuOpen(false);
-                            toast.info("Sort by GST clicked");
-                          }}
+                          onClick={() => handleSort("partner_gst")}
                         >
-                          Sort by GST
+                          Sort by GST{getSortIndicator("partner_gst")}
+                        </button>
+                        <button
+                          className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                          onClick={() => handleSort("state")}
+                        >
+                          Sort by State{getSortIndicator("state")}
+                        </button>
+                        <button
+                          className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                          onClick={() => handleSort("city")}
+                        >
+                          Sort by City{getSortIndicator("city")}
+                        </button>
+                        <button
+                          className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                          onClick={() => handleSort("pincode")}
+                        >
+                          Sort by Pincode{getSortIndicator("pincode")}
+                        </button>
+                        <button
+                          className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                          onClick={() => handleSort("isCustomer")}
+                        >
+                          Sort by Customer Status{getSortIndicator("isCustomer")}
                         </button>
                       </div>
                     )}
@@ -226,14 +317,31 @@ export const Partners = () => {
               <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-sm">
                 <tr>
                   <th className="px-4 py-3 text-left text-[12px]">Serial No.</th>
-                  <th className="px-4 py-3 text-left text-[12px]">Name</th>
+                  <th className="px-4 py-3 text-left text-[12px] cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                      onClick={() => handleSort("partner_name")}>
+                    Name{getSortIndicator("partner_name")}
+                  </th>
                   <th className="px-4 py-3 text-left text-[12px]">Address</th>
-                  <th className="px-4 py-3 text-left text-[12px]">State</th>
-                  <th className="px-4 py-3 text-left text-[12px]">City</th>
-                  <th className="px-4 py-3 text-left text-[12px]">Pincode</th>
-                  <th className="px-4 py-3 text-left text-[12px]">GST</th>
-                  <th className="px-4 py-3 text-left text-[12px]">Is Customer</th>
-
+                  <th className="px-4 py-3 text-left text-[12px] cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                      onClick={() => handleSort("state")}>
+                    State{getSortIndicator("state")}
+                  </th>
+                  <th className="px-4 py-3 text-left text-[12px] cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                      onClick={() => handleSort("city")}>
+                    City{getSortIndicator("city")}
+                  </th>
+                  <th className="px-4 py-3 text-left text-[12px] cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                      onClick={() => handleSort("pincode")}>
+                    Pincode{getSortIndicator("pincode")}
+                  </th>
+                  <th className="px-4 py-3 text-left text-[12px] cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                      onClick={() => handleSort("partner_gst")}>
+                    GST{getSortIndicator("partner_gst")}
+                  </th>
+                  <th className="px-4 py-3 text-left text-[12px] cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                      onClick={() => handleSort("isCustomer")}>
+                    Is Customer{getSortIndicator("isCustomer")}
+                  </th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
@@ -246,12 +354,11 @@ export const Partners = () => {
                     onMouseEnter={() => setHoveredRow(partner.id)}
                     onMouseLeave={() => setHoveredRow(null)}
                   >
-                    <td className="px-4 py-3 text-[12px] text-left">{i + 1}</td>
+                    <td className="px-4 py-3 text-[12px] text-left">{(currentPage - 1) * rowsPerPage + i + 1}</td>
                     <td className="px-4 py-3 text-[12px] text-left">{partner.partner_name}</td>
                     <td className="px-4 py-3 text-[12px]">
                       {partner.partner_address?.slice(0, 30) + "..."}
                     </td>
-
                     <td className="px-4 py-3 text-[12px] text-left">
                       {partner.state}
                     </td>

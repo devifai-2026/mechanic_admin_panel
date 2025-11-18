@@ -17,6 +17,9 @@ type RevenueRow = {
   linkedProjects: number;
 };
 
+type SortField = "revenue_code" | "revenue_value" | "linkedProjects";
+type SortDirection = "asc" | "desc";
+
 export const Revenue = () => {
   const [revenues, setRevenues] = useState<RevenueRow[]>([]);
   const [selectedRevenue, setSelectedRevenue] = useState<RevenueRow | null>(
@@ -29,6 +32,8 @@ export const Revenue = () => {
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortField, setSortField] = useState<SortField>("revenue_code");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const navigate = useNavigate();
 
   const fetchAndSetRevenues = async () => {
@@ -85,17 +90,61 @@ export const Revenue = () => {
     }
   };
 
+  // Apply sorting
+  const sortRevenues = (revenues: RevenueRow[]): RevenueRow[] => {
+    return [...revenues].sort((a, b) => {
+      let aValue: any = a[sortField];
+      let bValue: any = b[sortField];
+
+      // For string fields, convert to lowercase for case-insensitive sorting
+      if (sortField === "revenue_code") {
+        aValue = aValue.toLowerCase();
+        bValue = bValue.toLowerCase();
+      }
+
+      if (aValue < bValue) {
+        return sortDirection === "asc" ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortDirection === "asc" ? 1 : -1;
+      }
+      return 0;
+    });
+  };
+
   // Apply search filter
   const filteredRevenues = revenues.filter((rev) =>
     rev.revenue_code.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Apply sorting to filtered revenues
+  const sortedRevenues = sortRevenues(filteredRevenues);
 
   const {
     currentPage,
     setCurrentPage,
     totalPages,
     paginatedData: paginatedRevenues,
-  } = usePagination(filteredRevenues, rowsPerPage);
+  } = usePagination(sortedRevenues, rowsPerPage);
+
+  const handleSort = (field: SortField) => {
+    // If clicking the same field, toggle direction
+    if (field === sortField) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // If clicking a different field, set it as primary with ascending order
+      setSortField(field);
+      setSortDirection("asc");
+    }
+    setSortMenuOpen(false);
+    setMoreDropdownOpen(false);
+    toast.info(`Sorted by ${field.replace('_', ' ')} ${sortDirection === "asc" ? "ascending" : "descending"}`);
+  };
+
+  const getSortIndicator = (field: SortField) => {
+    if (sortField !== field) return null;
+    return sortDirection === "asc" ? " ↑" : " ↓";
+  };
 
   return (
     <>
@@ -161,25 +210,18 @@ export const Revenue = () => {
                   </button>
                   {sortMenuOpen && (
                     <div className="absolute right-full top-0 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-40 py-1">
+                    
                       <button
                         className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
-                        onClick={() => {
-                          setMoreDropdownOpen(false);
-                          setSortMenuOpen(false);
-                          toast.info("Sort by Value clicked");
-                        }}
+                        onClick={() => handleSort("revenue_value")}
                       >
-                        Sort by Value
+                        Sort by Value{getSortIndicator("revenue_value")}
                       </button>
                       <button
                         className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
-                        onClick={() => {
-                          setMoreDropdownOpen(false);
-                          setSortMenuOpen(false);
-                          toast.info("Sort by Linked Projects clicked");
-                        }}
+                        onClick={() => handleSort("linkedProjects")}
                       >
-                        Sort by Linked Projects
+                        Sort by Linked Projects{getSortIndicator("linkedProjects")}
                       </button>
                     </div>
                   )}
@@ -202,9 +244,16 @@ export const Revenue = () => {
               <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-sm">
                 <tr>
                   <th className="px-4 py-3 text-[12px]">Serial No.</th>
-                  <th className="px-4 py-3 text-[12px]">Revenue Code</th>
+                  <th className="px-4 py-3 text-[12px] cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                      onClick={() => handleSort("revenue_code")}>
+                    Revenue Code{getSortIndicator("revenue_code")}
+                  </th>
                   <th className="px-4 py-3 text-[12px]">Description</th>
-                  <th className="px-4 py-3 text-[12px]">Value</th>
+                  <th className="px-4 py-3 text-[12px] cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                      onClick={() => handleSort("revenue_value")}>
+                    Value{getSortIndicator("revenue_value")}
+                  </th>
+                
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
@@ -218,7 +267,9 @@ export const Revenue = () => {
                       onMouseEnter={() => setHoveredRow(revenue.id)}
                       onMouseLeave={() => setHoveredRow(null)}
                     >
-                      <td className="px-4 py-3 text-[12px]">{i + 1}</td>
+                      <td className="px-4 py-3 text-[12px]">
+                        {(currentPage - 1) * rowsPerPage + i + 1}
+                      </td>
                       <td className="px-4 py-3 text-[12px]">
                         {revenue.revenue_code}
                       </td>
@@ -226,9 +277,9 @@ export const Revenue = () => {
                         {revenue.revenue_description}
                       </td>
                       <td className="px-4 py-3 text-[12px]">
-                        ₹{revenue.revenue_value}
+                        ₹{revenue.revenue_value.toLocaleString()}
                       </td>
-
+                     
                       <td className="flex justify-center gap-2 relative">
                         {hoveredRow === revenue.id && (
                           <button

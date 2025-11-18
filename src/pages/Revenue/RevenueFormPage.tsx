@@ -70,7 +70,7 @@ const RevenueFormPage: React.FC = () => {
     }
   }, [id, isEdit]);
 
-  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
@@ -178,7 +178,7 @@ const RevenueFormPage: React.FC = () => {
             onChange={handleChange}
             placeholder="Enter revenue code (e.g., REV001)"
           />
-          <InputField
+          <TextAreaField
             icon={<FaAlignLeft />}
             label="Description"
             name="description"
@@ -314,7 +314,7 @@ interface InputFieldProps {
   label: string;
   name: string;
   value: string;
-  onChange: (e: ChangeEvent<HTMLInputElement>) => void;
+  onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   type?: string;
   placeholder?: string;
 }
@@ -350,6 +350,43 @@ const InputField: React.FC<InputFieldProps> = ({
         onChange={onChange}
         placeholder={fieldPlaceholder}
         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+      />
+    </div>
+  );
+};
+
+interface TextAreaFieldProps {
+  icon: React.ReactNode;
+  label: string;
+  name: string;
+  value: string;
+  onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  placeholder?: string;
+  rows?: number;
+}
+
+const TextAreaField: React.FC<TextAreaFieldProps> = ({
+  icon,
+  label,
+  name,
+  value,
+  onChange,
+  placeholder = "",
+  rows = 4,
+}) => {
+  return (
+    <div>
+      <label className="flex items-center mb-1 text-gray-700 dark:text-gray-200 font-medium">
+        <span className="mr-2">{icon}</span>
+        {label}
+      </label>
+      <textarea
+        name={name}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder || "Enter revenue description"}
+        rows={rows}
+        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-vertical"
       />
     </div>
   );

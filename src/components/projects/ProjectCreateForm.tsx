@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { MultiSelect } from "../../components/projects/MultiSelect";
 import { fetchRevenues } from "../../apis/revenueApi";
-import { fetchEquipments } from "../../apis/equipmentApi";
 import { fetchCustomers } from "../../apis/customerApi";
 import { fetchStores } from "../../apis/storeApi";
 import { Customer } from "../../types/customerTypes";
@@ -52,7 +51,6 @@ export const ProjectCreateForm: React.FC<ProjectFormProps> = ({
 
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [revenueOptions, setRevenueOptions] = useState<Option[]>([]);
-  const [equipmentOptions, setEquipmentOptions] = useState<Option[]>([]);
   const [storeOptions, setStoreOptions] = useState<Option[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -89,12 +87,12 @@ export const ProjectCreateForm: React.FC<ProjectFormProps> = ({
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        const [customersData, storeData, revenues, equipments] =
+        const [customersData, storeData, revenues] =
           await Promise.all([
             fetchCustomers(),
             fetchStores(),
             fetchRevenues(),
-            fetchEquipments(),
+            // Removed fetchEquipments since it's not used
           ]);
 
         setCustomers(customersData);
@@ -108,12 +106,6 @@ export const ProjectCreateForm: React.FC<ProjectFormProps> = ({
           revenues.map((rev: any) => ({
             value: rev.id,
             text: `${rev.revenue_code}`,
-          }))
-        );
-        setEquipmentOptions(
-          equipments.map((eq: any) => ({
-            value: eq.id,
-            text: eq.equipment_name || "Unnamed Equipment",
           }))
         );
       } catch (err) {

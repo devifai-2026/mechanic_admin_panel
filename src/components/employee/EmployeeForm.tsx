@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { fetchRoles } from "../../apis/roleApi";
 import { fetchShifts } from "../../apis/shiftApi";
 import { getAllOrganisations } from "../../apis/organisationApi";
-import { State, City } from "country-state-city";
+import { State, City, ICity } from "country-state-city";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -10,13 +10,39 @@ type Option = { id: string; name: string; shift_code?: string };
 
 type ValidationField = "age" | "pincode" | "acc_holder_name" | "acc_no" | "ifsc_code";
 
+type EmployeeFormData = {
+  emp_id: string;
+  emp_name: string;
+  blood_group: string;
+  age: string;
+  adress: string;
+  position: string;
+  is_active: boolean;
+  shiftcode: string;
+  role_id: string;
+  org_id: string;
+  app_access_role: string;
+  state: string;
+  city: string;
+  pincode: string;
+  acc_holder_name: string;
+  bank_name: string;
+  acc_no: string;
+  ifsc_code: string;
+  dob: Date | null;
+  aadhar_number: string;
+};
+
 type EmployeeFormProps = {
-  initialData?: any;
-  onSubmit: (data: any) => void;
+  initialData?: Partial<EmployeeFormData>;
+  onSubmit: (data: EmployeeFormData) => void;
   loading?: boolean;
 };
 
-const APP_ACCESS_ROLES = [
+type BloodGroupOption = { value: string; text: string };
+type AppAccessRole = { text: string; value: string };
+
+const APP_ACCESS_ROLES: AppAccessRole[] = [
   { text: "Mechanic", value: "mechanic" },
   { text: "Mechanic Incharge", value: "mechanicIncharge" },
   { text: "Site Incharge", value: "siteIncharge" },
@@ -31,7 +57,7 @@ export const EmployeeForm = ({
   onSubmit,
   loading = false,
 }: EmployeeFormProps) => {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<EmployeeFormData>({
     emp_id: "",
     emp_name: "",
     blood_group: "",
@@ -50,11 +76,11 @@ export const EmployeeForm = ({
     bank_name: "",
     acc_no: "",
     ifsc_code: "",
-    dob: null as Date | null,
+    dob: null,
     aadhar_number: ""
   });
 
-  const bloodGroupOptions = [
+  const bloodGroupOptions: BloodGroupOption[] = [
     { value: "A+", text: "A+" },
     { value: "A-", text: "A-" },
     { value: "B+", text: "B+" },
@@ -69,7 +95,7 @@ export const EmployeeForm = ({
   const [shifts, setShifts] = useState<Option[]>([]);
   const [organisations, setOrganisations] = useState<Option[]>([]);
   const [states] = useState(State.getStatesOfCountry("IN"));
-  const [cities, setCities] = useState<any[]>([]);
+  const [cities, setCities] = useState<ICity[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -91,9 +117,27 @@ export const EmployeeForm = ({
         setOrganisations(orgsData.map((o) => ({ id: o.id, name: o.org_name })));
 
         if (initialData) {
-          const formattedData = {
-            ...initialData,
-            dob: initialData.dob ? new Date(initialData.dob) : null
+          const formattedData: EmployeeFormData = {
+            emp_id: initialData.emp_id || "",
+            emp_name: initialData.emp_name || "",
+            blood_group: initialData.blood_group || "",
+            age: initialData.age || "",
+            adress: initialData.adress || "",
+            position: initialData.position || "",
+            is_active: initialData.is_active ?? true,
+            shiftcode: initialData.shiftcode || "",
+            role_id: initialData.role_id || "",
+            org_id: initialData.org_id || "",
+            app_access_role: initialData.app_access_role || "",
+            state: initialData.state || "",
+            city: initialData.city || "",
+            pincode: initialData.pincode || "",
+            acc_holder_name: initialData.acc_holder_name || "",
+            bank_name: initialData.bank_name || "",
+            acc_no: initialData.acc_no || "",
+            ifsc_code: initialData.ifsc_code || "",
+            dob: initialData.dob ? new Date(initialData.dob) : null,
+            aadhar_number: initialData.aadhar_number || ""
           };
           setFormData(formattedData);
 
@@ -145,7 +189,7 @@ export const EmployeeForm = ({
     }
 
     // Prepare the data to submit
-    const submitData = {
+    const submitData: EmployeeFormData = {
       ...formData,
       shiftcode: formData.shiftcode || "", // Ensure empty string if not selected
     };
@@ -206,7 +250,7 @@ export const EmployeeForm = ({
 
   const inputField = (
     label: string,
-    name: string,
+    name: keyof EmployeeFormData,
     type: string = "text",
     required: boolean = true,
     className: string = "w-full",
@@ -238,8 +282,8 @@ export const EmployeeForm = ({
       }
     };
 
-    const isValidationField = (name: string): name is ValidationField => {
-      return name in validations;
+    const isValidationField = (fieldName: string): fieldName is ValidationField => {
+      return fieldName in validations;
     };
 
     const isInvalid = isValidationField(name) ? !validations[name].isValid : false;
@@ -270,7 +314,7 @@ export const EmployeeForm = ({
         <input
           type={type}
           name={name}
-          value={(formData as any)[name] || ""}
+          value={formData[name] as string || ""}
           onChange={handleChange}
           onBlur={(e) => {
             if (name === "ifsc_code" && e.target.value.length !== 11 && e.target.value !== "") {
@@ -318,13 +362,12 @@ export const EmployeeForm = ({
 
   const selectField = (
     label: string,
-    name: string,
-    options: Option[] | { value: string; text: string }[],
+    name: keyof EmployeeFormData,
+    options: Option[] | BloodGroupOption[] | AppAccessRole[],
     required: boolean = true,
     className: string = "w-full"
   ) => {
     const isShift = name === "shiftcode";
-    const isOptional = name === "shiftcode" && !required;
 
     return (
       <div className={`${className} px-3 mb-4`}>
@@ -333,28 +376,40 @@ export const EmployeeForm = ({
         </label>
         <select
           name={name}
-          value={(formData as any)[name] || ""}
+          value={formData[name] as string || ""}
           onChange={handleChange}
           required={required}
           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
         >
           <option value="">Select {label}</option>
-          {options.map((option: any) => (
+          {options.map((option) => (
             <option
               key={
-                isShift
+                isShift && 'shift_code' in option
                   ? option.shift_code || option.id
-                  : option.id || option.value
+                  : 'id' in option 
+                    ? option.id 
+                    : 'value' in option 
+                      ? option.value 
+                      : ''
               }
               value={
-                isShift
+                isShift && 'shift_code' in option
                   ? option.shift_code || option.id
-                  : option.id || option.value
+                  : 'id' in option 
+                    ? option.id 
+                    : 'value' in option 
+                      ? option.value 
+                      : ''
               }
             >
-              {isShift
+              {isShift && 'shift_code' in option
                 ? option.shift_code || option.name
-                : option.name || option.text}
+                : 'name' in option 
+                  ? option.name 
+                  : 'text' in option 
+                    ? option.text 
+                    : ''}
             </option>
           ))}
         </select>
