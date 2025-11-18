@@ -18,24 +18,58 @@ export const Equipments = () => {
   const [equipmentGroups, setEquipmentGroups] = useState<any[]>([]);
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
   const [moreDropdownOpen, setMoreDropdownOpen] = useState(false);
-  // const [sortMenuOpen, setSortMenuOpen] = useState(false);
+  const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortField, setSortField] = useState<string>("");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   const navigate = useNavigate();
 
-  // Filtered data
+  // Sort equipments
+  const sortEquipments = (equipments: any[]) => {
+    if (!sortField) return equipments;
+
+    return [...equipments].sort((a, b) => {
+      let aValue = a[sortField];
+      let bValue = b[sortField];
+
+      // Handle date sorting
+      if (sortField === "purchase_date") {
+        aValue = new Date(aValue).getTime();
+        bValue = new Date(bValue).getTime();
+      }
+
+      // Handle numeric sorting for purchase cost
+      if (sortField === "purchase_cost") {
+        aValue = Number(aValue) || 0;
+        bValue = Number(bValue) || 0;
+      }
+
+      if (aValue < bValue) {
+        return sortDirection === "asc" ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortDirection === "asc" ? 1 : -1;
+      }
+      return 0;
+    });
+  };
+
+  // Filtered and sorted data
   const filteredEquipments = equipments.filter((eq) =>
     eq.equipment_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     eq.equipment_sr_no.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const sortedEquipments = sortEquipments(filteredEquipments);
 
   const {
     currentPage,
     setCurrentPage,
     totalPages,
     paginatedData: paginatedEquipments,
-  } = usePagination(filteredEquipments, rowsPerPage);
+  } = usePagination(sortedEquipments, rowsPerPage);
 
   const exportToCSV = (data: any[]) => {
     if (!data || data.length === 0) {
@@ -76,6 +110,28 @@ export const Equipments = () => {
     document.body.removeChild(link);
 
     toast.success("Exported successfully!");
+  };
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      // Toggle direction if same field
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // Set new field with ascending direction
+      setSortField(field);
+      setSortDirection("asc");
+    }
+    setSortMenuOpen(false);
+    setMoreDropdownOpen(false);
+    
+    const fieldName = field === "purchase_cost" ? "Purchase Cost" : "Purchase Date";
+    const direction = sortField === field ? (sortDirection === "asc" ? "descending" : "ascending") : "ascending";
+    toast.info(`Sorted by ${fieldName} ${direction}`);
+  };
+
+  const getSortIndicator = (field: string) => {
+    if (sortField !== field) return null;
+    return sortDirection === "asc" ? " ↑" : " ↓";
   };
 
   useEffect(() => {
@@ -189,6 +245,35 @@ export const Equipments = () => {
                   >
                     Refresh
                   </button>
+                  <div
+                    className="relative"
+                    onMouseEnter={() => setSortMenuOpen(true)}
+                    onMouseLeave={() => setSortMenuOpen(false)}
+                  >
+                    <button
+                      className="w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition flex justify-between items-center"
+                      onClick={() => setSortMenuOpen((prev) => !prev)}
+                    >
+                      Sort
+                      <span className="ml-2">&gt;</span>
+                    </button>
+                    {sortMenuOpen && (
+                      <div className="absolute right-full top-0 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-40 py-1">
+                        <button
+                          className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                          onClick={() => handleSort("purchase_cost")}
+                        >
+                          Sort by Purchase Cost{getSortIndicator("purchase_cost")}
+                        </button>
+                        <button
+                          className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                          onClick={() => handleSort("purchase_date")}
+                        >
+                          Sort by Purchase Date{getSortIndicator("purchase_date")}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </span>
@@ -210,9 +295,15 @@ export const Equipments = () => {
                   <th className="px-4 py-3 text-[12px] text-left">Equipment Name</th>
                   <th className="px-4 py-3 text-[12px] text-left">Equipment Serial No</th>
                   <th className="px-4 py-3 text-[12px] text-left">Additional ID</th>
-                  <th className="px-4 py-3 text-[12px] text-left">Purchase Date</th>
+                  <th className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                      onClick={() => handleSort("purchase_date")}>
+                    Purchase Date{getSortIndicator("purchase_date")}
+                  </th>
                   <th className="px-4 py-3 text-[12px] text-left">OEM</th>
-                  <th className="px-4 py-3 text-[12px] text-left">Purchase Cost</th>
+                  <th className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                      onClick={() => handleSort("purchase_cost")}>
+                    Purchase Cost{getSortIndicator("purchase_cost")}
+                  </th>
                   <th className="px-4 py-3 text-[12px] text-left">Group</th>
                   <th className="px-4 py-3 text-[12px]"></th>
                 </tr>
@@ -226,12 +317,13 @@ export const Equipments = () => {
                     onMouseEnter={() => setHoveredRow(equipment.id)}
                     onMouseLeave={() => setHoveredRow(null)}
                   >
-                    <td className="px-4 py-3 text-[12px] text-left">{i +1}</td>
+                    <td className="px-4 py-3 text-[12px] text-left">{(currentPage - 1) * rowsPerPage + i + 1}</td>
                     <td className="px-4 py-3 text-[12px] text-left">{equipment.equipment_name}</td>
                     <td className="px-4 py-3 text-[12px] text-left">{equipment.equipment_sr_no}</td>
                     <td className="px-4 py-3 text-[12px] text-left">{equipment.additional_id}</td>
                     <td className="px-4 py-3 text-[12px] text-left">
                       {(() => {
+                        if (!equipment.purchase_date) return "-";
                         const date = new Date(equipment.purchase_date);
                         const dd = String(date.getDate()).padStart(2, "0");
                         const mm = String(date.getMonth() + 1).padStart(2, "0");
@@ -239,9 +331,10 @@ export const Equipments = () => {
                         return `${dd}-${mm}-${yyyy}`;
                       })()}
                     </td>
-
                     <td className="px-4 py-3 text-[12px] text-left">{equipment.oem}</td>
-                    <td className="px-4 py-3 text-[12px] text-left">{equipment.purchase_cost}</td>
+                    <td className="px-4 py-3 text-[12px] text-left">
+                      {equipment.purchase_cost ? `₹${equipment.purchase_cost.toLocaleString()}` : "-"}
+                    </td>
                     <td className="px-4 py-3 text-[12px]">
                       {
                         equipmentGroups.find(
