@@ -331,7 +331,7 @@ export const Equipments = () => {
                         return `${dd}-${mm}-${yyyy}`;
                       })()}
                     </td>
-                    <td className="px-4 py-3 text-[12px] text-left">{equipment.oem}</td>
+                    <td className="px-4 py-3 text-[12px] text-left">{equipment?.oemDetails?.oem_code}</td>
                     <td className="px-4 py-3 text-[12px] text-left">
                       {equipment.purchase_cost ? `₹${equipment.purchase_cost.toLocaleString()}` : "-"}
                     </td>

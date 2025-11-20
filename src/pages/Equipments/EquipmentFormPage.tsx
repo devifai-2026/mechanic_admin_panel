@@ -256,15 +256,17 @@ export default function EquipmentFormPage() {
             data.project_tag
               ? Array.isArray(data.project_tag)
                 ? data.project_tag.map(
-                    (tag: any) => tag.site || tag.value || tag
-                  )
+                  (tag: any) => tag.site || tag.value || tag
+                )
                 : [data.project_tag.site || data.project_tag]
               : []
           );
-          setSelectedGroups(data.equipment_group_id 
-            ? Array.isArray(data.equipment_group_id) 
-              ? data.equipment_group_id 
-              : [data.equipment_group_id]
+
+          // ✅ FIXED: Set as array with single value for multi-select component
+          setSelectedGroups(data.equipment_group_id
+            ? Array.isArray(data.equipment_group_id)
+              ? [data.equipment_group_id[0]] // Take first one only
+              : [data.equipment_group_id] // Wrap single value in array
             : []
           );
         })
@@ -322,7 +324,8 @@ export default function EquipmentFormPage() {
           ? await uploadToCloudinary(formData.otherLog)
           : formData.otherLog;
 
-      // Build payload with multiple project tags and equipment groups
+      // ✅ FIXED: Backend expects single equipment_group_id, not array
+      // ✅ FIXED: Backend expects project_tag, not project_tags
       const payload = {
         equipment_name: formData.equipmentName,
         equipment_sr_no: formData.serialNo,
@@ -333,8 +336,8 @@ export default function EquipmentFormPage() {
         equipment_manual: equipmentManualUrl,
         maintenance_log: maintenanceLogUrl,
         other_log: otherLogUrl,
-        project_tags: selectedProjects, // Array of selected project IDs
-        equipment_group_ids: selectedGroups, // Array of selected group IDs
+        project_tag: selectedProjects, // Array of selected project IDs
+        equipment_group_id: selectedGroups[0], // ✅ Take first element only (single value)
         hsn_number: formData.hsn_number,
       };
 
@@ -363,11 +366,10 @@ export default function EquipmentFormPage() {
       <div className="mb-6 flex gap-4">
         <button
           onClick={() => setActiveTab("form")}
-          className={`flex items-center px-4 py-2 rounded-md transition ${
-            activeTab === "form"
-              ? "bg-blue-500 text-white"
-              : "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200"
-          }`}
+          className={`flex items-center px-4 py-2 rounded-md transition ${activeTab === "form"
+            ? "bg-blue-500 text-white"
+            : "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200"
+            }`}
         >
           Equipment Form
         </button>
@@ -375,11 +377,10 @@ export default function EquipmentFormPage() {
           <button
             onClick={() => setActiveTab("bulk")}
             disabled={true}
-            className={`cursor-not-allowed flex items-center px-4 py-2 rounded-md transition ${
-              activeTab === "bulk"
-                ? "bg-blue-500 text-white"
-                : "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200"
-            }`}
+            className={`cursor-not-allowed flex items-center px-4 py-2 rounded-md transition ${activeTab === "bulk"
+              ? "bg-blue-500 text-white"
+              : "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200"
+              }`}
           >
             <FaUpload className="mr-2" /> Bulk Upload
           </button>
@@ -508,12 +509,11 @@ export default function EquipmentFormPage() {
                     }));
                   }
                 }}
-                className={`w-full px-3 py-2 border ${
-                  formData.hsn_number !== 0 &&
+                className={`w-full px-3 py-2 border ${formData.hsn_number !== 0 &&
                   formData.hsn_number.toString().length !== 8
-                    ? "border-red-500"
-                    : "border-gray-300"
-                } dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                  ? "border-red-500"
+                  : "border-gray-300"
+                  } dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500`}
                 placeholder="Enter 8-digit HSN number"
               />
               {formData.hsn_number !== 0 &&
@@ -582,8 +582,8 @@ export default function EquipmentFormPage() {
                   ? "Updating..."
                   : "Creating..."
                 : isEdit
-                ? "Update Equipment"
-                : "Create Equipment"}
+                  ? "Update Equipment"
+                  : "Create Equipment"}
             </button>
           </div>
         </form>
