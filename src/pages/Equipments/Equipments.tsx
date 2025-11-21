@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { fetchEquipments, deleteEquipment } from "../../apis/equipmentApi";
-import { fetchEquipmentGroups } from "../../apis/equipmentGroupApi";
 import Pagination from "../../utils/Pagination";
 import { usePagination } from "../../hooks/usePagination";
 import { toast, ToastContainer } from "react-toastify";
