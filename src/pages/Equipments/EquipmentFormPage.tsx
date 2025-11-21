@@ -337,7 +337,7 @@ export default function EquipmentFormPage() {
         maintenance_log: maintenanceLogUrl,
         other_log: otherLogUrl,
         project_tag: selectedProjects, // Array of selected project IDs
-        equipment_group_id: selectedGroups[0], // ✅ Take first element only (single value)
+        equipment_group_id: selectedGroups, // ✅ Take first element only (single value)
         hsn_number: formData.hsn_number,
       };
 
@@ -360,6 +360,8 @@ export default function EquipmentFormPage() {
     }
   };
 
+
+  console.log({activeTab})
   return (
     <div className="max-w-3xl mx-auto p-8 bg-white dark:bg-gray-800 rounded-xl shadow">
       <ToastContainer position="bottom-right" autoClose={3000} />
@@ -376,8 +378,8 @@ export default function EquipmentFormPage() {
         {!isEdit && (
           <button
             onClick={() => setActiveTab("bulk")}
-            disabled={true}
-            className={`cursor-not-allowed flex items-center px-4 py-2 rounded-md transition ${activeTab === "bulk"
+            // disabled={true}
+            className={` flex items-center px-4 py-2 rounded-md transition ${activeTab === "bulk"
               ? "bg-blue-500 text-white"
               : "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200"
               }`}

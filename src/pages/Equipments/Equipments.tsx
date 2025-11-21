@@ -57,9 +57,10 @@ export const Equipments = () => {
   };
 
   // Filtered and sorted data
-  const filteredEquipments = equipments.filter((eq) =>
-    eq.equipment_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    eq.equipment_sr_no.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredEquipments = equipments.filter(
+    (eq) =>
+      eq.equipment_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      eq.equipment_sr_no.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const sortedEquipments = sortEquipments(filteredEquipments);
@@ -123,9 +124,15 @@ export const Equipments = () => {
     }
     setSortMenuOpen(false);
     setMoreDropdownOpen(false);
-    
-    const fieldName = field === "purchase_cost" ? "Purchase Cost" : "Purchase Date";
-    const direction = sortField === field ? (sortDirection === "asc" ? "descending" : "ascending") : "ascending";
+
+    const fieldName =
+      field === "purchase_cost" ? "Purchase Cost" : "Purchase Date";
+    const direction =
+      sortField === field
+        ? sortDirection === "asc"
+          ? "descending"
+          : "ascending"
+        : "ascending";
     toast.info(`Sorted by ${fieldName} ${direction}`);
   };
 
@@ -263,13 +270,15 @@ export const Equipments = () => {
                           className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
                           onClick={() => handleSort("purchase_cost")}
                         >
-                          Sort by Purchase Cost{getSortIndicator("purchase_cost")}
+                          Sort by Purchase Cost
+                          {getSortIndicator("purchase_cost")}
                         </button>
                         <button
                           className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
                           onClick={() => handleSort("purchase_date")}
                         >
-                          Sort by Purchase Date{getSortIndicator("purchase_date")}
+                          Sort by Purchase Date
+                          {getSortIndicator("purchase_date")}
                         </button>
                       </div>
                     )}
@@ -292,16 +301,26 @@ export const Equipments = () => {
               <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-sm">
                 <tr>
                   <th className="px-4 py-3 text-[12px] text-left">Serial No</th>
-                  <th className="px-4 py-3 text-[12px] text-left">Equipment Name</th>
-                  <th className="px-4 py-3 text-[12px] text-left">Equipment Serial No</th>
-                  <th className="px-4 py-3 text-[12px] text-left">Additional ID</th>
-                  <th className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
-                      onClick={() => handleSort("purchase_date")}>
+                  <th className="px-4 py-3 text-[12px] text-left">
+                    Equipment Name
+                  </th>
+                  <th className="px-4 py-3 text-[12px] text-left">
+                    Equipment Serial No
+                  </th>
+                  <th className="px-4 py-3 text-[12px] text-left">
+                    Additional ID
+                  </th>
+                  <th
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                    onClick={() => handleSort("purchase_date")}
+                  >
                     Purchase Date{getSortIndicator("purchase_date")}
                   </th>
                   <th className="px-4 py-3 text-[12px] text-left">OEM</th>
-                  <th className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
-                      onClick={() => handleSort("purchase_cost")}>
+                  <th
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                    onClick={() => handleSort("purchase_cost")}
+                  >
                     Purchase Cost{getSortIndicator("purchase_cost")}
                   </th>
                   <th className="px-4 py-3 text-[12px] text-left">Group</th>
@@ -317,10 +336,18 @@ export const Equipments = () => {
                     onMouseEnter={() => setHoveredRow(equipment.id)}
                     onMouseLeave={() => setHoveredRow(null)}
                   >
-                    <td className="px-4 py-3 text-[12px] text-left">{(currentPage - 1) * rowsPerPage + i + 1}</td>
-                    <td className="px-4 py-3 text-[12px] text-left">{equipment.equipment_name}</td>
-                    <td className="px-4 py-3 text-[12px] text-left">{equipment.equipment_sr_no}</td>
-                    <td className="px-4 py-3 text-[12px] text-left">{equipment.additional_id}</td>
+                    <td className="px-4 py-3 text-[12px] text-left">
+                      {(currentPage - 1) * rowsPerPage + i + 1}
+                    </td>
+                    <td className="px-4 py-3 text-[12px] text-left">
+                      {equipment.equipment_name}
+                    </td>
+                    <td className="px-4 py-3 text-[12px] text-left">
+                      {equipment.equipment_sr_no}
+                    </td>
+                    <td className="px-4 py-3 text-[12px] text-left">
+                      {equipment.additional_id}
+                    </td>
                     <td className="px-4 py-3 text-[12px] text-left">
                       {(() => {
                         if (!equipment.purchase_date) return "-";
@@ -331,16 +358,21 @@ export const Equipments = () => {
                         return `${dd}-${mm}-${yyyy}`;
                       })()}
                     </td>
-                    <td className="px-4 py-3 text-[12px] text-left">{equipment?.oemDetails?.oem_code}</td>
                     <td className="px-4 py-3 text-[12px] text-left">
-                      {equipment.purchase_cost ? `₹${equipment.purchase_cost.toLocaleString()}` : "-"}
+                      {equipment?.oemDetails?.oem_code}
                     </td>
-                    <td className="px-4 py-3 text-[12px]">
-                      {
-                        equipmentGroups.find(
-                          (g: any) => g.id === equipment.equipment_group_id
-                        )?.equipment_group || ""
-                      }
+                    <td className="px-4 py-3 text-[12px] text-left">
+                      {equipment.purchase_cost
+                        ? `₹${equipment.purchase_cost.toLocaleString()}`
+                        : "-"}
+                    </td>
+                    <td className="px-4 py-3 text-[12px] text-left">
+                      {equipment.equipmentGroup &&
+                      equipment.equipmentGroup.length > 0
+                        ? equipment.equipmentGroup
+                            .map((group: any) => group.equipment_group)
+                            .join(", ")
+                        : "-"}
                     </td>
                     <td className="flex justify-center gap-2 relative">
                       {hoveredRow === equipment.id && (

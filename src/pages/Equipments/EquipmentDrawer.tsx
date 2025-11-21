@@ -18,20 +18,38 @@ const EquipmentDrawer: React.FC<{
 }> = ({ isOpen, onClose, equipment }) => {
   if (!isOpen || !equipment) return null;
 
-  // console.log({ equipment })
+  // Helper function to check if a log is a valid PDF URL
+  const isValidPdf = (log: string) => {
+    if (!log || typeof log !== 'string') return false;
+    return log.trim().toLowerCase().endsWith('.pdf');
+  };
+
+  // Format display data
   const displayEquipment = {
     name: equipment.equipment_name || equipment.name || "",
     serialNo: equipment.equipment_sr_no || equipment.serialNo || "",
     additionalId: equipment.additional_id || equipment.additionalId || "",
     purchaseDate: equipment.purchase_date || equipment.purchaseDate || "",
-    oem: equipment.oem || "", // should already be a name string after backend fix
+    oem: equipment.oemDetails?.oem_name || equipment.oemDetails?.oem_code || equipment.oem || "N/A",
+    oemCode: equipment.oemDetails?.oem_code || "",
     purchaseCost: equipment.purchase_cost ?? equipment.purchaseCost ?? "",
-    group: equipment.equipment_group_name || equipment.group || "",
+    equipmentGroups: equipment.equipmentGroup || [],
+    projects: equipment.projects || [],
     manual: equipment.equipment_manual || "",
     maintenanceLog: equipment.maintenance_log || "",
     otherLog: equipment.other_log || "",
     hsn_number: equipment.hsn_number || "",
   };
+
+  // Format equipment groups as comma-separated names
+  const equipmentGroupsDisplay = displayEquipment.equipmentGroups.length > 0 
+    ? displayEquipment.equipmentGroups.map((group: any) => group.equipment_group).join(', ')
+    : "N/A";
+
+  // Format projects as comma-separated project numbers
+  const projectsDisplay = displayEquipment.projects.length > 0
+    ? displayEquipment.projects.map((project: any) => project.project_no).join(', ')
+    : "N/A";
 
   return (
     <div className="">
@@ -78,7 +96,7 @@ const EquipmentDrawer: React.FC<{
                   <h3 className="font-semibold text-gray-700 dark:text-white">Serial No</h3>
                 </div>
                 <p className="text-gray-800 dark:text-gray-200 pl-6">
-                  {displayEquipment.serialNo}
+                  {displayEquipment.serialNo || "N/A"}
                 </p>
               </div>
 
@@ -89,7 +107,7 @@ const EquipmentDrawer: React.FC<{
                   <h3 className="font-semibold text-gray-700 dark:text-white">Additional ID</h3>
                 </div>
                 <p className="text-gray-800 dark:text-gray-200 pl-6">
-                  {displayEquipment.additionalId}
+                  {displayEquipment.additionalId || "N/A"}
                 </p>
               </div>
 
@@ -100,12 +118,11 @@ const EquipmentDrawer: React.FC<{
                   <h3 className="font-semibold text-gray-700 dark:text-white">Purchase Date</h3>
                 </div>
                 <p className="text-gray-800 dark:text-gray-200 pl-6">
-                  {equipment.purchase_date
-                    ? new Date(equipment.purchase_date).toLocaleDateString("en-GB")
-                    : "-"}
+                  {displayEquipment.purchaseDate
+                    ? new Date(displayEquipment.purchaseDate).toLocaleDateString("en-GB")
+                    : "N/A"}
                 </p>
               </div>
-
 
               {/* OEM */}
               <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
@@ -113,7 +130,9 @@ const EquipmentDrawer: React.FC<{
                   <FaIndustry className="text-gray-500 dark:text-gray-300 mr-2" />
                   <h3 className="font-semibold text-gray-700 dark:text-white">OEM</h3>
                 </div>
-                <p className="text-gray-800 dark:text-gray-200 pl-6">{displayEquipment.oem}</p>
+                <p className="text-gray-800 dark:text-gray-200 pl-6">
+                  {displayEquipment.oemCode ? `${displayEquipment.oem} (${displayEquipment.oemCode})` : displayEquipment.oem}
+                </p>
               </div>
 
               {/* Purchase Cost */}
@@ -123,20 +142,53 @@ const EquipmentDrawer: React.FC<{
                   <h3 className="font-semibold text-gray-700 dark:text-white">Purchase Cost</h3>
                 </div>
                 <p className="text-gray-800 dark:text-gray-200 pl-6">
-                  ₹{displayEquipment.purchaseCost}
+                  {displayEquipment.purchaseCost ? `₹${displayEquipment.purchaseCost.toLocaleString()}` : "N/A"}
+                </p>
+              </div>
+
+              {/* HSN Number */}
+              <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                <div className="flex items-center mb-3">
+                  <GoNumber className="text-gray-500 dark:text-gray-300 mr-2" />
+                  <h3 className="font-semibold text-gray-700 dark:text-white">HSN Number</h3>
+                </div>
+                <p className="text-gray-800 dark:text-gray-200 pl-6">
+                  {displayEquipment.hsn_number || "N/A"}
+                </p>
+              </div>
+
+              {/* Project Tags */}
+              <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                <div className="flex items-center mb-3">
+                  <FaTag className="text-gray-500 dark:text-gray-300 mr-2" />
+                  <h3 className="font-semibold text-gray-700 dark:text-white">Project Tags</h3>
+                </div>
+                <p className="text-gray-800 dark:text-gray-200 pl-6">
+                  {projectsDisplay}
+                </p>
+              </div>
+
+              {/* Equipment Groups */}
+              <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                <div className="flex items-center mb-3">
+                  <FaLayerGroup className="text-gray-500 dark:text-gray-300 mr-2" />
+                  <h3 className="font-semibold text-gray-700 dark:text-white">Equipment Groups</h3>
+                </div>
+                <p className="text-gray-800 dark:text-gray-200 pl-6">
+                  {equipmentGroupsDisplay}
                 </p>
               </div>
 
               {/* Equipment Manual */}
-              {displayEquipment.manual && (
-                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg col-span-1 md:col-span-2">
-                  <div className="flex items-center mb-3">
-                    <FaTools className="text-gray-500 dark:text-gray-300 mr-2" />
-                    <h3 className="font-semibold text-gray-700 dark:text-white">
-                      Equipment Manual
-                    </h3>
-                  </div>
-                  <div className="pl-6">
+              <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg col-span-1 md:col-span-2">
+                <div className="flex items-center mb-3">
+                  <FaTools className="text-gray-500 dark:text-gray-300 mr-2" />
+                  <h3 className="font-semibold text-gray-700 dark:text-white">
+                    Equipment Manual
+                  </h3>
+                </div>
+                <div className="pl-6">
+                  {isValidPdf(displayEquipment.manual) ? (
                     <a
                       href={displayEquipment.manual}
                       target="_blank"
@@ -145,21 +197,22 @@ const EquipmentDrawer: React.FC<{
                     >
                       📄 View PDF
                     </a>
-                  </div>
+                  ) : (
+                    <span className="text-gray-500">N/A</span>
+                  )}
                 </div>
-              )}
+              </div>
 
               {/* Maintenance Log */}
-              {displayEquipment.maintenanceLog && (
-                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg col-span-1 md:col-span-2">
-                  <div className="flex items-center mb-3">
-                    <FaTools className="text-gray-500 dark:text-gray-300 mr-2" />
-                    <h3 className="font-semibold text-gray-700 dark:text-white">
-                      Maintenance Log
-                    </h3>
-                  </div>
-                  <div className="pl-6">
-
+              <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg col-span-1 md:col-span-2">
+                <div className="flex items-center mb-3">
+                  <FaTools className="text-gray-500 dark:text-gray-300 mr-2" />
+                  <h3 className="font-semibold text-gray-700 dark:text-white">
+                    Maintenance Log
+                  </h3>
+                </div>
+                <div className="pl-6">
+                  {isValidPdf(displayEquipment.maintenanceLog) ? (
                     <a
                       href={displayEquipment.maintenanceLog}
                       target="_blank"
@@ -168,19 +221,20 @@ const EquipmentDrawer: React.FC<{
                     >
                       📄 View PDF
                     </a>
-                  </div>
+                  ) : (
+                    <span className="text-gray-500">N/A</span>
+                  )}
                 </div>
-              )}
+              </div>
 
               {/* Other Log */}
-              {displayEquipment.otherLog && (
-                <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg col-span-1 md:col-span-2">
-                  <div className="flex items-center mb-3">
-                    <FaTools className="text-gray-500 dark:text-gray-300 mr-2" />
-                    <h3 className="font-semibold text-gray-700 dark:text-white">Other Log</h3>
-                  </div>
-                  <div className="pl-6">
-
+              <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg col-span-1 md:col-span-2">
+                <div className="flex items-center mb-3">
+                  <FaTools className="text-gray-500 dark:text-gray-300 mr-2" />
+                  <h3 className="font-semibold text-gray-700 dark:text-white">Other Log</h3>
+                </div>
+                <div className="pl-6">
+                  {isValidPdf(displayEquipment.otherLog) ? (
                     <a
                       href={displayEquipment.otherLog}
                       target="_blank"
@@ -189,35 +243,11 @@ const EquipmentDrawer: React.FC<{
                     >
                       📄 View PDF
                     </a>
-                  </div>
+                  ) : (
+                    <span className="text-gray-500">N/A</span>
+                  )}
                 </div>
-              )}
-              {/* Project Tag */}
-              <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                <div className="flex items-center mb-3">
-                  <FaTag className="text-gray-500 dark:text-gray-300 mr-2" />
-                  <h3 className="font-semibold text-gray-700 dark:text-white">Project Tag</h3>
-                </div>
-                <p className="text-gray-800 dark:text-gray-200 pl-6">{equipment.project_tag}</p>
               </div>
-
-              {/* Equipment Group ID */}
-              <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                <div className="flex items-center mb-3">
-                  <FaLayerGroup className="text-gray-500 dark:text-gray-300 mr-2" />
-                  <h3 className="font-semibold text-gray-700 dark:text-white">Group ID</h3>
-                </div>
-                <p className="text-gray-800 dark:text-gray-200 pl-6">{equipment.equipment_group_id}</p>
-              </div>
-
-              <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                <div className="flex items-center mb-3">
-                  <GoNumber className="text-gray-500 dark:text-gray-300 mr-2" />
-                  <h3 className="font-semibold text-gray-700 dark:text-white">Hsn No</h3>
-                </div>
-                <p className="text-gray-800 dark:text-gray-200 pl-6">{equipment.hsn_number}</p>
-              </div>
-
             </div>
             <div className="mt-6 flex justify-end">
               <button
