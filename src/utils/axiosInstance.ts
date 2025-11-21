@@ -1,7 +1,7 @@
 // utils/axiosInstance.ts
 import axios from "axios";
 
-const isProduction = false; // Change this to false for development
+const isProduction = true; // Change this to false for development
 
 console.log("Axios Instance - Production Mode:", isProduction);
 
