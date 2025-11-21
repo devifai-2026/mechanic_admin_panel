@@ -15,7 +15,7 @@ export const Equipments = () => {
   const [selectedEquipment, setSelectedEquipment] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
-  const [equipmentGroups, setEquipmentGroups] = useState<any[]>([]);
+  // const [equipmentGroups, setEquipmentGroups] = useState<any[]>([]);
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
   const [moreDropdownOpen, setMoreDropdownOpen] = useState(false);
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
@@ -142,14 +142,7 @@ export const Equipments = () => {
   };
 
   useEffect(() => {
-    const fetchAndSetEquipmentGroups = async () => {
-      try {
-        const data = await fetchEquipmentGroups();
-        setEquipmentGroups(data);
-      } catch (err) {
-        console.error("Failed to fetch equipment groups", err);
-      }
-    };
+   
 
     const fetchAndSetEquipments = async () => {
       setLoading(true);
@@ -162,7 +155,7 @@ export const Equipments = () => {
       setLoading(false);
     };
 
-    fetchAndSetEquipmentGroups();
+   
     fetchAndSetEquipments();
   }, []);
 
