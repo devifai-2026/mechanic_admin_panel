@@ -252,23 +252,20 @@ export default function EquipmentFormPage() {
             hsn_number: data.hsn_number,
           });
 
-          setSelectedProjects(
-            data.project_tag
-              ? Array.isArray(data.project_tag)
-                ? data.project_tag.map(
-                  (tag: any) => tag.site || tag.value || tag
-                )
-                : [data.project_tag.site || data.project_tag]
-              : []
-          );
+          // ✅ FIXED: Project Tags - handle both array and single value
+          const projectTags = data.projects || [];
+          const projectIds = Array.isArray(projectTags)
+            ? projectTags.map((tag: any) => tag.id || tag) // Extract IDs from objects
+            : [projectTags.id || projectTags]; // Handle single value
 
-          // ✅ FIXED: Set as array with single value for multi-select component
-          setSelectedGroups(data.equipment_group_id
-            ? Array.isArray(data.equipment_group_id)
-              ? [data.equipment_group_id[0]] // Take first one only
-              : [data.equipment_group_id] // Wrap single value in array
-            : []
-          );
+          setSelectedProjects(projectIds.filter(Boolean)); // Remove any null/undefined
+
+          // ✅ FIXED: Equipment Groups - extract IDs from equipmentGroup array
+          const groupIds = data.equipmentGroup
+            ? data.equipmentGroup.map((group: any) => group.id).filter(Boolean)
+            : [];
+
+          setSelectedGroups(groupIds);
         })
         .catch(() => toast.error("Failed to load equipment"))
         .finally(() => setLoading(false));
@@ -336,8 +333,8 @@ export default function EquipmentFormPage() {
         equipment_manual: equipmentManualUrl,
         maintenance_log: maintenanceLogUrl,
         other_log: otherLogUrl,
-        project_tag: selectedProjects, // Array of selected project IDs
-        equipment_group_id: selectedGroups, // ✅ Take first element only (single value)
+        project_tag: selectedProjects, // Array of project IDs
+        equipment_group_id: selectedGroups, // ✅ Now properly sending array of group IDs
         hsn_number: formData.hsn_number,
       };
 
@@ -361,7 +358,7 @@ export default function EquipmentFormPage() {
   };
 
 
-  console.log({activeTab})
+  console.log({ activeTab })
   return (
     <div className="max-w-3xl mx-auto p-8 bg-white dark:bg-gray-800 rounded-xl shadow">
       <ToastContainer position="bottom-right" autoClose={3000} />
