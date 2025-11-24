@@ -239,7 +239,7 @@ export const StoreLocation = () => {
             <table className="w-full min-w-[900px] text-base bg-white dark:bg-gray-800">
               <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-sm">
                 <tr>
-                  <th className="px-4 py-3 text-[12px] text-left">Serial No.</th>
+                 
                   <th className="px-4 py-3 text-[12px] text-left">Store Code</th>
                   <th className="px-4 py-3 text-[12px] text-left">Name</th>
                   <th className="px-4 py-3 text-[12px] text-left">Location</th>
@@ -256,7 +256,7 @@ export const StoreLocation = () => {
                       onMouseEnter={() => setHoveredRow(store.id)}
                       onMouseLeave={() => setHoveredRow(null)}
                     >
-                      <td className="px-4 py-3 text-[12px] text-left">{i +1}</td>
+                    
                       <td className="px-4 py-3 text-[12px] text-left">{store.store_code}</td>
                       <td className="px-4 py-3 text-[12px] text-left">{store.store_name || "-"}</td>
                       <td className="px-4 py-3 text-[12px] text-left">{store.store_location}</td>

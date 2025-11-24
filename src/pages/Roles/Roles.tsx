@@ -230,7 +230,7 @@ export const Roles = () => {
             <table className="w-full min-w-[700px] text-base bg-white dark:bg-gray-800">
               <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-sm">
                 <tr>
-                  <th className="px-4 py-3 text-[12px] text-left">Serial No.</th>
+                
                   <th className="px-4 py-3 text-[12px] text-left">Code</th>
                   <th className="px-4 py-3 text-[12px] text-left">Role Name</th>
                   <th className="px-4 py-3"></th>
@@ -246,7 +246,7 @@ export const Roles = () => {
                       onMouseEnter={() => setHoveredRow(role.id)}
                       onMouseLeave={() => setHoveredRow(null)}
                     >
-                      <td className="px-4 py-3 text-[12px] text-left">{i + 1}</td>
+                     
                       <td className="px-4 py-3 text-[12px] text-left">{role.code}</td>
                       <td className="px-4 py-3 text-[12px] text-left">{role.name}</td>
                       <td className="flex justify-center gap-2 relative">

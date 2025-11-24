@@ -242,7 +242,7 @@ export const Shifts = () => {
             <table className="w-full min-w-[900px] text-base bg-white dark:bg-gray-800">
               <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-sm">
                 <tr>
-                  <th className="px-4 py-3 text-[12px] text-left">Serial No.</th>
+                 
                   <th className="px-4 py-3 text-[12px] text-left">Shift Code</th>
                   <th className="px-4 py-3 text-[12px] text-left">From Time</th>
                   <th className="px-4 py-3 text-[12px] text-left">To Time</th>
@@ -259,7 +259,7 @@ export const Shifts = () => {
                       onMouseEnter={() => setHoveredRow(shift.id)}
                       onMouseLeave={() => setHoveredRow(null)}
                     >
-                      <td className="px-4 py-3 text-[12px] text-left">{i+1}</td>
+                     
                       <td className="px-4 py-3 text-[12px] text-left">{shift.shift_code}</td>
                       <td className="px-4 py-3 text-[12px] text-left">{shift.shift_from_time}</td>
                       <td className="px-4 py-3 text-[12px] text-left">{shift.shift_to_time}</td>

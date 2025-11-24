@@ -15,6 +15,7 @@ import {
   FaCalendarAlt,
   FaUpload,
   FaTimes,
+  FaFilePdf,
 } from "react-icons/fa";
 import { GoNumber } from "react-icons/go";
 import { fetchEquipmentGroups } from "../../apis/equipmentGroupApi";
@@ -35,6 +36,28 @@ const uploadToCloudinary = async (file: File): Promise<string> => {
     formData
   );
   return response.data.secure_url;
+};
+
+// Helper function to check if log field contains invalid data
+const isInvalidLogField = (logField: any): boolean => {
+  if (!logField || typeof logField !== 'string') return true;
+  
+  const trimmedField = logField.trim();
+  if (trimmedField === '') return true;
+  
+  // Check for patterns of escaped backslashes or quotes
+  const invalidPatterns = [
+    /^"+$/, // Only quotes
+    /^\\+$/, // Only backslashes
+    /^["\\\s]*$/, // Only quotes, backslashes, or whitespace
+    /^\"\\\"\\\\\\\"/, // Starts with escaped backslash patterns
+    /^\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\/, // Multiple backslashes
+  ];
+  
+  const hasInvalidPattern = invalidPatterns.some(pattern => pattern.test(trimmedField));
+  const isPdfUrl = trimmedField.includes('.pdf') && trimmedField.startsWith('http');
+  
+  return hasInvalidPattern || !isPdfUrl;
 };
 
 // Reusable FilterableMultiSelect Component
@@ -185,8 +208,6 @@ export default function EquipmentFormPage() {
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
 
-  console.log({ oemArr });
-
   const [formData, setFormData] = useState({
     equipmentName: "",
     serialNo: "",
@@ -227,11 +248,10 @@ export default function EquipmentFormPage() {
 
     getAllOEMs()
       .then((oems: any[]) => {
-        console.log({oems})
         setOem(
           oems.map((oem) => ({
             value: oem.id,
-            label: `${oem.oem_code} - ${oem.oem_name}`, // Show both code and name
+            label: `${oem.oem_code} - ${oem.oem_name}`,
           }))
         );
       })
@@ -243,47 +263,49 @@ export default function EquipmentFormPage() {
       setLoading(true);
       fetchEquipmentById(id)
         .then((data: any) => {
-          // ✅ Temporary any type for now
-          console.log({ data });
+          console.log("Loaded equipment data:", data);
           const purchaseDate = data.purchase_date
             ? new Date(data.purchase_date).toISOString().split("T")[0]
             : "";
 
-          setFormData({
-            equipmentName: data.equipment_name,
-            serialNo: data.equipment_sr_no,
-            additionalId: data.additional_id,
-            purchaseDate: purchaseDate, // Use the formatted date
-            oem: data.oem,
-            purchaseCost: data.purchase_cost,
-            equipmentManual: data.equipment_manual,
-            maintenanceLog: JSON.stringify(data.maintenance_log ?? ""),
-            otherLog: JSON.stringify(data.other_log ?? ""),
-            hsn_number: data.hsn_number,
+          // Clean log fields - set to empty string if invalid
+          const equipmentManual = isInvalidLogField(data.equipment_manual) ? "" : data.equipment_manual;
+          const maintenanceLog = isInvalidLogField(data.maintenance_log) ? "" : data.maintenance_log;
+          const otherLog = isInvalidLogField(data.other_log) ? "" : data.other_log;
+
+          console.log("Cleaned log fields:", {
+            equipmentManual,
+            maintenanceLog,
+            otherLog
           });
 
-          // ✅ FIXED: Project Tags - handle API response properly
+          setFormData({
+            equipmentName: data.equipment_name || "",
+            serialNo: data.equipment_sr_no || "",
+            additionalId: data.additional_id || "",
+            purchaseDate: purchaseDate,
+            oem: data.oem || "",
+            purchaseCost: data.purchase_cost || 0,
+            equipmentManual: equipmentManual,
+            maintenanceLog: maintenanceLog,
+            otherLog: otherLog,
+            hsn_number: data.hsn_number || 0,
+          });
+
+          // Handle project tags
           const projectTags = data.projects || data.project_tag || [];
           const projectIds = Array.isArray(projectTags)
             ? projectTags.map((tag: any) => tag.id).filter(Boolean)
             : [];
-
           setSelectedProjects(projectIds);
 
-          // ✅ FIXED: Equipment Groups - handle API response properly
+          // Handle equipment groups
           const equipmentGroups = data.equipmentGroup || [];
           const groupIds = Array.isArray(equipmentGroups)
             ? equipmentGroups.map((group: any) => group.id).filter(Boolean)
             : [];
-
           setSelectedGroups(groupIds);
 
-          console.log("Loaded data:", {
-            projects: projectTags,
-            projectIds,
-            equipmentGroups,
-            groupIds,
-          });
         })
         .catch((err) => {
           console.error("Failed to load equipment:", err);
@@ -327,23 +349,23 @@ export default function EquipmentFormPage() {
     }
 
     try {
-      const equipmentManualUrl =
+      // Handle file uploads and clean log fields
+      const equipmentManualUrl = 
         typeof formData.equipmentManual === "object"
           ? await uploadToCloudinary(formData.equipmentManual)
-          : formData.equipmentManual;
+          : (isInvalidLogField(formData.equipmentManual) ? "" : formData.equipmentManual);
 
-      const maintenanceLogUrl =
+      const maintenanceLogUrl = 
         typeof formData.maintenanceLog === "object"
           ? await uploadToCloudinary(formData.maintenanceLog)
-          : formData.maintenanceLog;
+          : (isInvalidLogField(formData.maintenanceLog) ? "" : formData.maintenanceLog);
 
-      const otherLogUrl =
+      const otherLogUrl = 
         typeof formData.otherLog === "object"
           ? await uploadToCloudinary(formData.otherLog)
-          : formData.otherLog;
+          : (isInvalidLogField(formData.otherLog) ? "" : formData.otherLog);
 
-      // ✅ FIXED: Backend expects single equipment_group_id, not array
-      // ✅ FIXED: Backend expects project_tag, not project_tags
+      // Prepare payload with cleaned log fields
       const payload = {
         equipment_name: formData.equipmentName,
         equipment_sr_no: formData.serialNo,
@@ -354,12 +376,12 @@ export default function EquipmentFormPage() {
         equipment_manual: equipmentManualUrl,
         maintenance_log: maintenanceLogUrl,
         other_log: otherLogUrl,
-        project_tag: selectedProjects, // Array of project IDs
-        equipment_group_id: selectedGroups, // ✅ Now properly sending array of group IDs
+        project_tag: selectedProjects,
+        equipment_group_id: selectedGroups,
         hsn_number: formData.hsn_number,
       };
 
-      console.log({ payload });
+      console.log("Submitting payload:", payload);
 
       if (isEdit && id) {
         await updateEquipment(id, payload as any);
@@ -378,7 +400,6 @@ export default function EquipmentFormPage() {
     }
   };
 
-  console.log({ activeTab });
   return (
     <div className="max-w-3xl mx-auto p-8 bg-white dark:bg-gray-800 rounded-xl shadow">
       <ToastContainer position="bottom-right" autoClose={3000} />
@@ -396,8 +417,7 @@ export default function EquipmentFormPage() {
         {!isEdit && (
           <button
             onClick={() => setActiveTab("bulk")}
-            // disabled={true}
-            className={` flex items-center px-4 py-2 rounded-md transition ${
+            className={`flex items-center px-4 py-2 rounded-md transition ${
               activeTab === "bulk"
                 ? "bg-blue-500 text-white"
                 : "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200"
@@ -538,18 +558,21 @@ export default function EquipmentFormPage() {
               icon={<FaCogs />}
               label="Equipment Manual (PDF only)"
               name="equipmentManual"
+              value={formData.equipmentManual}
               onChange={handleFileChange}
             />
             <FileField
               icon={<FaCogs />}
               label="Maintenance Log (PDF only)"
               name="maintenanceLog"
+              value={formData.maintenanceLog}
               onChange={handleFileChange}
             />
             <FileField
               icon={<FaCogs />}
               label="Other Log (PDF only)"
               name="otherLog"
+              value={formData.otherLog}
               onChange={handleFileChange}
             />
 
@@ -645,28 +668,60 @@ const InputField = ({
 };
 
 // Reusable FileField
-const FileField = ({ icon, label, name, onChange }: any) => (
-  <div className="md:col-span-2 mt-4">
-    <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">
-      <span className="inline-flex items-center gap-2">
-        {icon}
-        {label}
-      </span>
-    </label>
-    <input
-      type="file"
-      name={name}
-      accept="application/pdf"
-      onChange={onChange}
-      className="block w-full cursor-pointer text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md
-        file:border-0 file:text-sm file:font-semibold
-        file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100
-        dark:file:bg-blue-900 dark:file:text-blue-300 dark:hover:file:bg-blue-800
-        transition-colors bg-white dark:bg-gray-700 text-gray-800 dark:text-white
-        border border-gray-300 dark:border-gray-600 rounded-md p-2"
-    />
-    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-      Only PDF files are accepted
-    </p>
-  </div>
-);
+const FileField = ({ icon, label, name, value, onChange }: any) => {
+  const hasValidFile = value && typeof value === 'string' && value.includes('.pdf') && value.startsWith('http');
+  
+  return (
+    <div className="md:col-span-2 mt-4">
+      <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">
+        <span className="inline-flex items-center gap-2">
+          {icon}
+          {label}
+        </span>
+      </label>
+      
+      {/* Show current file if exists and is valid */}
+      {hasValidFile && (
+        <div className="mb-2 p-2 bg-green-50 dark:bg-green-900 rounded-md flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <FaFilePdf className="text-red-500" />
+            <span className="text-sm text-green-700 dark:text-green-300">
+              Current file: 
+              <a 
+                href={value} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="underline ml-1"
+              >
+                View PDF
+              </a>
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => onChange({ target: { name, value: '' } })}
+            className="text-red-500 hover:text-red-700 text-sm"
+          >
+            Remove
+          </button>
+        </div>
+      )}
+      
+      <input
+        type="file"
+        name={name}
+        accept="application/pdf"
+        onChange={onChange}
+        className="block w-full cursor-pointer text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md
+          file:border-0 file:text-sm file:font-semibold
+          file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100
+          dark:file:bg-blue-900 dark:file:text-blue-300 dark:hover:file:bg-blue-800
+          transition-colors bg-white dark:bg-gray-700 text-gray-800 dark:text-white
+          border border-gray-300 dark:border-gray-600 rounded-md p-2"
+      />
+      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+        Only PDF files are accepted
+      </p>
+    </div>
+  );
+};

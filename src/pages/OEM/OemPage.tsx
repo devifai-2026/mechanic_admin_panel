@@ -195,7 +195,7 @@ export const OemPage = () => {
             <table className="w-full min-w-[700px] text-base bg-white dark:bg-gray-800">
               <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-sm">
                 <tr>
-                  <th className="px-4 py-3 text-left text-[12px]">Serial No.</th>
+                 
                   <th className="px-4 py-3 text-left text-[12px]">OEM Name</th>
                   <th className="px-4 py-3 text-left text-[12px]">OEM Code</th>
                   <th className="px-4 py-3"></th>
@@ -210,9 +210,7 @@ export const OemPage = () => {
                     onMouseEnter={() => setHoveredRow(oem.id)}
                     onMouseLeave={() => setHoveredRow(null)}
                   >
-                    <td className="px-4 py-3 text-left text-[12px]">
-                      {i + 1 + (currentPage - 1) * rowsPerPage}
-                    </td>
+                    
                     <td className="px-4 py-3 text-left text-[12px]">
                       {oem.oem_name}
                     </td>

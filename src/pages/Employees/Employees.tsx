@@ -279,7 +279,7 @@ export const Employees = () => {
             <table className="w-full min-w-[1100px] text-base bg-white dark:bg-gray-800">
               <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-sm">
                 <tr>
-                  <th className="px-4 py-3 text-[12px] text-left">Serial No.</th>
+                 
                   <th className="px-4 py-3 text-[12px] text-left">Emp ID</th>
                   <th className="px-4 py-3 text-[12px] text-left">Name</th>
                   <th className="px-4 py-3 text-[12px] text-left">Age</th>
@@ -301,7 +301,7 @@ export const Employees = () => {
                       onMouseEnter={() => setHoveredRow(employee.id)}
                       onMouseLeave={() => setHoveredRow(null)}
                     >
-                      <td className="px-4 py-2 text-[12px] text-left ">{i + 1}</td>
+                     
                       <td className="px-4 py-2 text-[12px] text-left ">
                         {employee.emp_id ? employee.emp_id.toUpperCase().replace(/[^A-Z0-9]/g, '') : ''}
                       </td>

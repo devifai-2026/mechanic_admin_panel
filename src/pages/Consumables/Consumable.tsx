@@ -223,9 +223,7 @@ export const Consumable = () => {
             <table className="w-full min-w-[700px] text-base bg-white dark:bg-gray-800">
               <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-sm">
                 <tr>
-                  <th className="px-4 py-3 text-[12px] text-left">
-                    Serial No.
-                  </th>
+                 
                   <th className="px-4 py-3 text-[12px] text-left">Code</th>
                   <th className="px-4 py-3 text-[12px] text-left">Item Name</th>
                   <th className="px-4 py-3 text-[12px] text-left">
@@ -244,7 +242,7 @@ export const Consumable = () => {
                     onMouseEnter={() => setHoveredRow(item.id)}
                     onMouseLeave={() => setHoveredRow(null)}
                   >
-                    <td className="px-4 py-3 text-[12px] text-left">{i + 1}</td>
+                   
                     <td className="px-4 py-3 text-[12px] text-left">
                       {item.item_code}
                     </td>

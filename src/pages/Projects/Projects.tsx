@@ -246,9 +246,7 @@ export const Projects = () => {
                   <table className="w-full min-w-full text-base">
                     <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-sm sticky top-0 z-10">
                       <tr>
-                        <th className="px-4 py-3 text-[12px] text-left">
-                          Serial No.
-                        </th>
+                       
                         <th className="px-4 py-3 text-[12px] text-left">
                           Project No
                         </th>
@@ -292,9 +290,7 @@ export const Projects = () => {
                           onMouseEnter={() => setHoveredRow(project.projectNo)}
                           onMouseLeave={() => setHoveredRow(null)}
                         >
-                          <td className="px-4 py-2 text-[12px] text-left">
-                            {idx + 1}
-                          </td>
+                        
                           <td className="px-4 py-2 text-[12px] text-left">
                             {project.projectNo}
                           </td>

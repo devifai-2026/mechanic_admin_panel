@@ -205,7 +205,7 @@ export const EquipmentGroup = () => {
                         <table className="w-full min-w-[700px] text-base bg-white dark:bg-gray-800">
                             <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-sm">
                                 <tr >
-                                    <th className="px-4 py-3 text-[12px] text-left">Serial No.</th>
+                                   
                                     <th className="px-4 py-3 text-[12px] text-left">Group Code</th>
                                     <th className="px-4 py-3 text-[12px] text-left">Group Name</th>
                                     <th className="px-4 py-3"></th>
@@ -224,9 +224,7 @@ export const EquipmentGroup = () => {
                                         onMouseEnter={() => setHoveredRow(group.id)}
                                         onMouseLeave={() => setHoveredRow(null)}
                                     >
-                                        <td className="px-4 py-3 text-[12px] text-left">
-                                            {(currentPage - 1) * rowsPerPage + i + 1}
-                                        </td>
+                                        
                                         <td className="px-4 py-3 text-[12px] text-left">
                                             {group.equip_grp_code}
                                         </td>
