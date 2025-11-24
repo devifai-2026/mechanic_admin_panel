@@ -293,7 +293,7 @@ export const Employees = () => {
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-600 text-gray-800 dark:text-gray-100 text-center">
                 {paginatedEmployees &&
-                  paginatedEmployees.map((employee, i) => (
+                  paginatedEmployees.map((employee) => (
                     <tr
                       key={employee.id}
                       className="hover:bg-gray-50 dark:hover:bg-gray-700 transition cursor-pointer"

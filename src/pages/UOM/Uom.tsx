@@ -239,7 +239,7 @@ export const Uom = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-600 text-gray-800 dark:text-gray-100 text-center">
-                {paginatedUoms.map((uom, i) => (
+                {paginatedUoms.map((uom) => (
                   <tr
                     key={uom.id}
                     className="hover:bg-gray-50 dark:hover:bg-gray-700 transition cursor-pointer"

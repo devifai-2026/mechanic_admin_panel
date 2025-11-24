@@ -346,7 +346,7 @@ export const Partners = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-600 text-gray-800 dark:text-gray-100">
-                {paginatedPartners.map((partner, i) => (
+                {paginatedPartners.map((partner) => (
                   <tr
                     key={partner.id}
                     className="hover:bg-gray-50 dark:hover:bg-gray-700 transition text-center cursor-pointer"

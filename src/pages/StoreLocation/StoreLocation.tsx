@@ -248,7 +248,7 @@ export const StoreLocation = () => {
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-600 text-gray-800 dark:text-gray-100 text-center">
                 {paginatedStores &&
-                  paginatedStores.map((store, i) => (
+                  paginatedStores.map((store) => (
                     <tr
                       key={store.id}
                       className="hover:bg-gray-50 dark:hover:bg-gray-700 transition cursor-pointer"
