@@ -8,10 +8,6 @@ export interface OtherLog {
   inspections: string[];
 }
 
-export interface ProjectTag {
-  project_no: string;
-  site: string;
-}
 
 export interface EquipmentPayload {
   equipment_name: string;
@@ -32,4 +28,25 @@ export interface EquipmentResponse extends EquipmentPayload {
   id: string;
   createdAt: string;
   updatedAt: string;
+}
+
+
+export interface ProjectTag {
+  id: string; 
+  project_no: string;
+  site: string;
+}
+
+export interface EquipmentGroup {
+  id: string;
+  equipment_group: string;
+  equip_grp_code: string;
+}
+
+export interface EquipmentResponse extends EquipmentPayload {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  equipmentGroup?: EquipmentGroup[]; 
+  projects?: ProjectTag[]; 
 }

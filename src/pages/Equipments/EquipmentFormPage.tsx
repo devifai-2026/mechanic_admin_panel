@@ -234,43 +234,54 @@ export default function EquipmentFormPage() {
       .catch(() => toast.error("Failed to load OEMs"));
   }, []);
 
-  useEffect(() => {
-    if (isEdit && id) {
-      setLoading(true);
-      fetchEquipmentById(id)
-        .then((data) => {
-          setFormData({
-            equipmentName: data.equipment_name,
-            serialNo: data.equipment_sr_no,
-            additionalId: data.additional_id,
-            purchaseDate: data.purchase_date,
-            oem: data.oem,
-            purchaseCost: data.purchase_cost,
-            equipmentManual: data.equipment_manual,
-            maintenanceLog: JSON.stringify(data.maintenance_log ?? ""),
-            otherLog: JSON.stringify(data.other_log ?? ""),
-            hsn_number: data.hsn_number,
-          });
+ useEffect(() => {
+  if (isEdit && id) {
+    setLoading(true);
+    fetchEquipmentById(id)
+      .then((data: any) => { // ✅ Temporary any type for now
+        setFormData({
+          equipmentName: data.equipment_name,
+          serialNo: data.equipment_sr_no,
+          additionalId: data.additional_id,
+          purchaseDate: data.purchase_date,
+          oem: data.oem,
+          purchaseCost: data.purchase_cost,
+          equipmentManual: data.equipment_manual,
+          maintenanceLog: JSON.stringify(data.maintenance_log ?? ""),
+          otherLog: JSON.stringify(data.other_log ?? ""),
+          hsn_number: data.hsn_number,
+        });
 
-          // ✅ FIXED: Project Tags - handle both array and single value
-          const projectTags = data.projects || [];
-          const projectIds = Array.isArray(projectTags)
-            ? projectTags.map((tag: any) => tag.id || tag) // Extract IDs from objects
-            : [projectTags.id || projectTags]; // Handle single value
+        // ✅ FIXED: Project Tags - handle API response properly
+        const projectTags = data.projects || data.project_tag || [];
+        const projectIds = Array.isArray(projectTags) 
+          ? projectTags.map((tag: any) => tag.id).filter(Boolean)
+          : [];
 
-          setSelectedProjects(projectIds.filter(Boolean)); // Remove any null/undefined
+        setSelectedProjects(projectIds);
 
-          // ✅ FIXED: Equipment Groups - extract IDs from equipmentGroup array
-          const groupIds = data.equipmentGroup
-            ? data.equipmentGroup.map((group: any) => group.id).filter(Boolean)
-            : [];
+        // ✅ FIXED: Equipment Groups - handle API response properly  
+        const equipmentGroups = data.equipmentGroup || [];
+        const groupIds = Array.isArray(equipmentGroups)
+          ? equipmentGroups.map((group: any) => group.id).filter(Boolean)
+          : [];
 
-          setSelectedGroups(groupIds);
-        })
-        .catch(() => toast.error("Failed to load equipment"))
-        .finally(() => setLoading(false));
-    }
-  }, [id, isEdit]);
+        setSelectedGroups(groupIds);
+
+        console.log("Loaded data:", {
+          projects: projectTags,
+          projectIds,
+          equipmentGroups,
+          groupIds
+        });
+      })
+      .catch((err) => {
+        console.error("Failed to load equipment:", err);
+        toast.error("Failed to load equipment");
+      })
+      .finally(() => setLoading(false));
+  }
+}, [id, isEdit]);
 
   const handleChange = (e: any) => {
     const { name, value, type } = e.target;
