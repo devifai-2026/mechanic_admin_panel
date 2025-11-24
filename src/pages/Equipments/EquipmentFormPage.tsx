@@ -102,7 +102,8 @@ const FilterableMultiSelect: React.FC<FilterableMultiSelectProps> = ({
       </label>
 
       {/* Selected Items Display */}
-      <div className="w-full min-h-10 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 flex flex-wrap gap-2 items-start cursor-text"
+      <div
+        className="w-full min-h-10 p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 flex flex-wrap gap-2 items-start cursor-text"
         onClick={() => setIsOpen(true)}
       >
         {selectedLabels.length > 0 ? (
@@ -184,6 +185,8 @@ export default function EquipmentFormPage() {
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
 
+  console.log({ oemArr });
+
   const [formData, setFormData] = useState({
     equipmentName: "",
     serialNo: "",
@@ -224,64 +227,71 @@ export default function EquipmentFormPage() {
 
     getAllOEMs()
       .then((oems: any[]) => {
+        console.log({oems})
         setOem(
           oems.map((oem) => ({
             value: oem.id,
-            label: oem.oem_code,
+            label: `${oem.oem_code} - ${oem.oem_name}`, // Show both code and name
           }))
         );
       })
       .catch(() => toast.error("Failed to load OEMs"));
   }, []);
 
- useEffect(() => {
-  if (isEdit && id) {
-    setLoading(true);
-    fetchEquipmentById(id)
-      .then((data: any) => { // ✅ Temporary any type for now
-        setFormData({
-          equipmentName: data.equipment_name,
-          serialNo: data.equipment_sr_no,
-          additionalId: data.additional_id,
-          purchaseDate: data.purchase_date,
-          oem: data.oem,
-          purchaseCost: data.purchase_cost,
-          equipmentManual: data.equipment_manual,
-          maintenanceLog: JSON.stringify(data.maintenance_log ?? ""),
-          otherLog: JSON.stringify(data.other_log ?? ""),
-          hsn_number: data.hsn_number,
-        });
+  useEffect(() => {
+    if (isEdit && id) {
+      setLoading(true);
+      fetchEquipmentById(id)
+        .then((data: any) => {
+          // ✅ Temporary any type for now
+          console.log({ data });
+          const purchaseDate = data.purchase_date
+            ? new Date(data.purchase_date).toISOString().split("T")[0]
+            : "";
 
-        // ✅ FIXED: Project Tags - handle API response properly
-        const projectTags = data.projects || data.project_tag || [];
-        const projectIds = Array.isArray(projectTags) 
-          ? projectTags.map((tag: any) => tag.id).filter(Boolean)
-          : [];
+          setFormData({
+            equipmentName: data.equipment_name,
+            serialNo: data.equipment_sr_no,
+            additionalId: data.additional_id,
+            purchaseDate: purchaseDate, // Use the formatted date
+            oem: data.oem,
+            purchaseCost: data.purchase_cost,
+            equipmentManual: data.equipment_manual,
+            maintenanceLog: JSON.stringify(data.maintenance_log ?? ""),
+            otherLog: JSON.stringify(data.other_log ?? ""),
+            hsn_number: data.hsn_number,
+          });
 
-        setSelectedProjects(projectIds);
+          // ✅ FIXED: Project Tags - handle API response properly
+          const projectTags = data.projects || data.project_tag || [];
+          const projectIds = Array.isArray(projectTags)
+            ? projectTags.map((tag: any) => tag.id).filter(Boolean)
+            : [];
 
-        // ✅ FIXED: Equipment Groups - handle API response properly  
-        const equipmentGroups = data.equipmentGroup || [];
-        const groupIds = Array.isArray(equipmentGroups)
-          ? equipmentGroups.map((group: any) => group.id).filter(Boolean)
-          : [];
+          setSelectedProjects(projectIds);
 
-        setSelectedGroups(groupIds);
+          // ✅ FIXED: Equipment Groups - handle API response properly
+          const equipmentGroups = data.equipmentGroup || [];
+          const groupIds = Array.isArray(equipmentGroups)
+            ? equipmentGroups.map((group: any) => group.id).filter(Boolean)
+            : [];
 
-        console.log("Loaded data:", {
-          projects: projectTags,
-          projectIds,
-          equipmentGroups,
-          groupIds
-        });
-      })
-      .catch((err) => {
-        console.error("Failed to load equipment:", err);
-        toast.error("Failed to load equipment");
-      })
-      .finally(() => setLoading(false));
-  }
-}, [id, isEdit]);
+          setSelectedGroups(groupIds);
+
+          console.log("Loaded data:", {
+            projects: projectTags,
+            projectIds,
+            equipmentGroups,
+            groupIds,
+          });
+        })
+        .catch((err) => {
+          console.error("Failed to load equipment:", err);
+          toast.error("Failed to load equipment");
+        })
+        .finally(() => setLoading(false));
+    }
+  }, [id, isEdit]);
 
   const handleChange = (e: any) => {
     const { name, value, type } = e.target;
@@ -368,18 +378,18 @@ export default function EquipmentFormPage() {
     }
   };
 
-
-  console.log({ activeTab })
+  console.log({ activeTab });
   return (
     <div className="max-w-3xl mx-auto p-8 bg-white dark:bg-gray-800 rounded-xl shadow">
       <ToastContainer position="bottom-right" autoClose={3000} />
       <div className="mb-6 flex gap-4">
         <button
           onClick={() => setActiveTab("form")}
-          className={`flex items-center px-4 py-2 rounded-md transition ${activeTab === "form"
-            ? "bg-blue-500 text-white"
-            : "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200"
-            }`}
+          className={`flex items-center px-4 py-2 rounded-md transition ${
+            activeTab === "form"
+              ? "bg-blue-500 text-white"
+              : "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200"
+          }`}
         >
           Equipment Form
         </button>
@@ -387,10 +397,11 @@ export default function EquipmentFormPage() {
           <button
             onClick={() => setActiveTab("bulk")}
             // disabled={true}
-            className={` flex items-center px-4 py-2 rounded-md transition ${activeTab === "bulk"
-              ? "bg-blue-500 text-white"
-              : "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200"
-              }`}
+            className={` flex items-center px-4 py-2 rounded-md transition ${
+              activeTab === "bulk"
+                ? "bg-blue-500 text-white"
+                : "bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200"
+            }`}
           >
             <FaUpload className="mr-2" /> Bulk Upload
           </button>
@@ -459,32 +470,20 @@ export default function EquipmentFormPage() {
                 }}
                 value={oemArr.find((opt) => opt.value === formData.oem)}
                 placeholder="Select OEM manufacturer"
-                className="text-black"
-                styles={{
-                  control: (base) => ({
-                    ...base,
-                    backgroundColor: "rgb(55 65 81)",
-                    borderColor: "rgb(75 85 99)",
-                  }),
-                  menu: (base) => ({
-                    ...base,
-                    backgroundColor: "rgb(55 65 81)",
-                  }),
-                  option: (base, state) => ({
-                    ...base,
-                    backgroundColor: state.isFocused
-                      ? "rgb(75 85 99)"
-                      : "rgb(55 65 81)",
-                    color: "white",
-                  }),
-                  singleValue: (base) => ({
-                    ...base,
-                    color: "white",
-                  }),
-                  input: (base) => ({
-                    ...base,
-                    color: "white",
-                  }),
+                className="text-gray-900"
+                classNames={{
+                  control: (state) =>
+                    `bg-white border border-gray-300 rounded-md p-1 ${
+                      state.isFocused
+                        ? "border-blue-500 ring-1 ring-blue-500"
+                        : "hover:border-gray-400"
+                    }`,
+                  menu: () => "bg-white border border-gray-300 rounded-md mt-1",
+                  option: (state) =>
+                    `${
+                      state.isFocused ? "bg-gray-100" : "bg-white"
+                    } hover:bg-gray-100 text-gray-900`,
+                  placeholder: () => "text-gray-500",
                 }}
               />
             </div>
@@ -519,11 +518,12 @@ export default function EquipmentFormPage() {
                     }));
                   }
                 }}
-                className={`w-full px-3 py-2 border ${formData.hsn_number !== 0 &&
+                className={`w-full px-3 py-2 border ${
+                  formData.hsn_number !== 0 &&
                   formData.hsn_number.toString().length !== 8
-                  ? "border-red-500"
-                  : "border-gray-300"
-                  } dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                    ? "border-red-500"
+                    : "border-gray-300"
+                } dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500`}
                 placeholder="Enter 8-digit HSN number"
               />
               {formData.hsn_number !== 0 &&
@@ -592,8 +592,8 @@ export default function EquipmentFormPage() {
                   ? "Updating..."
                   : "Creating..."
                 : isEdit
-                  ? "Update Equipment"
-                  : "Create Equipment"}
+                ? "Update Equipment"
+                : "Create Equipment"}
             </button>
           </div>
         </form>
