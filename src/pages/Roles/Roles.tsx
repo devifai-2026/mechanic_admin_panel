@@ -6,6 +6,7 @@ import Pagination from "../../utils/Pagination";
 import { toast, ToastContainer } from "react-toastify";
 import { FaCircleChevronDown, FaPlus } from "react-icons/fa6";
 import { IoIosMore } from "react-icons/io";
+import { FaSortUp, FaSortDown } from "react-icons/fa";
 import RolesDrawer from "./RolesDrawer";
 import Title from "../../components/common/Title";
 
@@ -13,6 +14,11 @@ type RoleRow = {
   id: string;
   code: string;
   name: string;
+};
+
+type SortConfig = {
+  key: keyof RoleRow | null;
+  direction: 'asc' | 'desc';
 };
 
 export const Roles = () => {
@@ -25,19 +31,67 @@ export const Roles = () => {
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: 'asc' });
   const navigate = useNavigate();
+
+  // Apply sorting
+  const applySorting = (data: RoleRow[], config: SortConfig) => {
+    if (!config.key) return data;
+
+    return [...data].sort((a, b) => {
+      let aValue = a[config.key!];
+      let bValue = b[config.key!];
+
+      // Handle null/undefined values
+      if (aValue == null) aValue = '';
+      if (bValue == null) bValue = '';
+
+      // Handle string values
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return config.direction === 'asc' 
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+
+      return 0;
+    });
+  };
+
+  const handleSort = (key: keyof RoleRow) => {
+    setSortConfig(currentConfig => ({
+      key,
+      direction: currentConfig.key === key && currentConfig.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const getSortIcon = (key: keyof RoleRow) => {
+    if (sortConfig.key !== key) {
+      return (
+        <div className="inline-flex flex-col ml-1 opacity-30">
+          <FaSortUp size={10} className="-mb-1" />
+          <FaSortDown size={10} className="-mt-1" />
+        </div>
+      );
+    }
+    
+    return sortConfig.direction === 'asc' 
+      ? <FaSortUp size={12} className="ml-1 text-blue-500" />
+      : <FaSortDown size={12} className="ml-1 text-blue-500" />;
+  };
 
   const filteredRoles = roles.filter((role) =>
     role.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     role.code.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const sortedRoles = applySorting(filteredRoles, sortConfig);
+
   const {
     currentPage,
     setCurrentPage,
     totalPages,
     paginatedData: paginatedRoles,
-  } = usePagination(filteredRoles, rowsPerPage);
+  } = usePagination(sortedRoles, rowsPerPage);
 
   const convertRolesToCSV = (roles: RoleRow[]) => {
     const header = ["ID", "Code", "Name"];
@@ -71,11 +125,12 @@ export const Roles = () => {
     setLoading(true);
     try {
       const data = await fetchRoles();
-      setRoles(data.map((item: any) => ({
+      const formattedRoles = data.map((item: any) => ({
         id: item.id,
         code: item.code,
         name: item.name,
-      })));
+      }));
+      setRoles(formattedRoles);
     } catch (err) {
       console.error("Failed to fetch roles", err);
     }
@@ -118,13 +173,15 @@ export const Roles = () => {
   };
 
   const handleSortByName = () => {
-    setRoles((prev) => [...prev].sort((a, b) => a.name.localeCompare(b.name)));
-    toast.info("Sorted by Name");
+    handleSort('name');
+    setMoreDropdownOpen(false);
+    setSortMenuOpen(false);
   };
 
   const handleSortByCode = () => {
-    setRoles((prev) => [...prev].sort((a, b) => a.code.localeCompare(b.code)));
-    toast.info("Sorted by Code");
+    handleSort('code');
+    setMoreDropdownOpen(false);
+    setSortMenuOpen(false);
   };
 
   return (
@@ -152,7 +209,7 @@ export const Roles = () => {
               <span>New</span>
             </button>
             <span
-              className="p-2 bg-gray-200 border-2 border-gray-50 rounded-lg cursor-pointer relative"
+              className="p-2 bg-gray-200 border-2 border-gray-50 rounded-lg cursor-pointer relative dark:bg-gray-700 dark:border-gray-600"
               onClick={(e) => {
                 e.stopPropagation();
                 setMoreDropdownOpen((prev) => !prev);
@@ -193,22 +250,14 @@ export const Roles = () => {
                     {sortMenuOpen && (
                       <div className="absolute right-full top-0 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-40 py-1">
                         <button
-                          className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
-                          onClick={() => {
-                            setMoreDropdownOpen(false);
-                            setSortMenuOpen(false);
-                            handleSortByName();
-                          }}
+                          className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
+                          onClick={handleSortByName}
                         >
                           Sort by Name
                         </button>
                         <button
-                          className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
-                          onClick={() => {
-                            setMoreDropdownOpen(false);
-                            setSortMenuOpen(false);
-                            handleSortByCode();
-                          }}
+                          className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
+                          onClick={handleSortByCode}
                         >
                           Sort by Code
                         </button>
@@ -230,9 +279,24 @@ export const Roles = () => {
             <table className="w-full min-w-[700px] text-base bg-white dark:bg-gray-800">
               <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-sm">
                 <tr>
-                
-                  <th className="px-4 py-3 text-[12px] text-left">Code</th>
-                  <th className="px-4 py-3 text-[12px] text-left">Role Name</th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    onClick={() => handleSort('code')}
+                  >
+                    <div className="flex items-center">
+                      Code
+                      {getSortIcon('code')}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    onClick={() => handleSort('name')}
+                  >
+                    <div className="flex items-center">
+                      Role Name
+                      {getSortIcon('name')}
+                    </div>
+                  </th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
@@ -246,7 +310,6 @@ export const Roles = () => {
                       onMouseEnter={() => setHoveredRow(role.id)}
                       onMouseLeave={() => setHoveredRow(null)}
                     >
-                     
                       <td className="px-4 py-3 text-[12px] text-left">{role.code}</td>
                       <td className="px-4 py-3 text-[12px] text-left">{role.name}</td>
                       <td className="flex justify-center gap-2 relative">

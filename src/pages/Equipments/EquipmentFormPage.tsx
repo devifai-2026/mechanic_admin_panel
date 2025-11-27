@@ -28,11 +28,12 @@ const uploadToCloudinary = async (file: File): Promise<string> => {
   formData.append("file", file);
   formData.append("upload_preset", "maco_corporationnew");
   formData.append("folder", "equipment_docs");
+  formData.append("resource_type", "raw");
 
   const cloudName = "dfjpc4teh";
 
   const response = await axios.post(
-    `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`,
+    `https://api.cloudinary.com/v1_1/${cloudName}/raw/upload`,
     formData
   );
   return response.data.secure_url;

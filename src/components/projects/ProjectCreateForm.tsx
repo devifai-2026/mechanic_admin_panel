@@ -8,6 +8,7 @@ import Select from "react-select";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { FaCalendarAlt, FaTimes } from "react-icons/fa";
+import { useNavigate } from "react-router";
 
 type ProjectFormProps = {
   onClose: () => void;
@@ -186,7 +187,7 @@ export const ProjectCreateForm: React.FC<ProjectFormProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
-
+ const navigate = useNavigate();
   const customerOptions = customers.map((cust) => ({
     value: cust.id,
     label: cust.partner_name,
@@ -335,6 +336,7 @@ export const ProjectCreateForm: React.FC<ProjectFormProps> = ({
         staff: [],
         storeLocations: [],
       });
+      navigate("/projects/view")
     } catch (error) {
       console.error("Error submitting form", error);
     } finally {

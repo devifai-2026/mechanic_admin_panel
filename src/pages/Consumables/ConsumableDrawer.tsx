@@ -15,7 +15,7 @@ const ConsumableDrawer: React.FC<{
   item: any;
 }> = ({ isOpen, onClose, item }) => {
   if (!isOpen || !item) return null;
-
+console.log({item})
   return (
     <div className="fixed inset-0 z-[99999]">
       {/* Overlay */}
@@ -116,7 +116,12 @@ const ConsumableDrawer: React.FC<{
             <DrawerInfo
               title="Revenue Account"
               icon={<FaChartLine />}
-              value={item.revenueAccount?.revenue_description}
+              value={item.revenueAccount?.account_name}
+            />
+             <DrawerInfo
+              title="HSN Number"
+              icon={<FaChartLine />}
+              value={item.hsn_number}
             />
           </div>
 

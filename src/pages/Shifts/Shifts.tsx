@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-// import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import { fetchShifts, deleteShift } from "../../apis/shiftApi";
 import { usePagination } from "../../hooks/usePagination";
 import Pagination from "../../utils/Pagination";
@@ -9,6 +8,7 @@ import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import { FaCircleChevronDown, FaPlus } from "react-icons/fa6";
 import { IoIosMore } from "react-icons/io";
+import { FaSortUp, FaSortDown } from "react-icons/fa";
 import ShiftDrawer from "./ShiftDrawer";
 import Title from "../../components/common/Title";
 
@@ -17,6 +17,11 @@ type ShiftRow = {
   shift_code: string;
   shift_from_time: string;
   shift_to_time: string;
+};
+
+type SortConfig = {
+  key: keyof ShiftRow | null;
+  direction: 'asc' | 'desc';
 };
 
 export const Shifts = () => {
@@ -29,6 +34,7 @@ export const Shifts = () => {
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: 'asc' });
   const navigate = useNavigate();
 
   const fetchAndSetShifts = async () => {
@@ -69,16 +75,76 @@ export const Shifts = () => {
     }
   }, [dropdownOpen]);
 
+  // Apply sorting
+  const applySorting = (data: ShiftRow[], config: SortConfig) => {
+    if (!config.key) return data;
+
+    return [...data].sort((a, b) => {
+      let aValue = a[config.key!];
+      let bValue = b[config.key!];
+
+      // Handle null/undefined values
+      if (aValue == null) aValue = '';
+      if (bValue == null) bValue = '';
+
+      // Handle time values (shift_from_time, shift_to_time)
+      if (config.key === 'shift_from_time' || config.key === 'shift_to_time') {
+        // Convert time strings to comparable format (HH:MM:SS to seconds)
+        const timeToSeconds = (timeStr: string) => {
+          const [hours, minutes, seconds] = timeStr.split(':').map(Number);
+          return hours * 3600 + minutes * 60 + (seconds || 0);
+        };
+        
+        const aSeconds = timeToSeconds(aValue);
+        const bSeconds = timeToSeconds(bValue);
+        return config.direction === 'asc' ? aSeconds - bSeconds : bSeconds - aSeconds;
+      }
+
+      // Handle string values
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return config.direction === 'asc' 
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+
+      return 0;
+    });
+  };
+
+  const handleSort = (key: keyof ShiftRow) => {
+    setSortConfig(currentConfig => ({
+      key,
+      direction: currentConfig.key === key && currentConfig.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const getSortIcon = (key: keyof ShiftRow) => {
+    if (sortConfig.key !== key) {
+      return (
+        <div className="inline-flex flex-col ml-1 opacity-30">
+          <FaSortUp size={10} className="-mb-1" />
+          <FaSortDown size={10} className="-mt-1" />
+        </div>
+      );
+    }
+    
+    return sortConfig.direction === 'asc' 
+      ? <FaSortUp size={12} className="ml-1 text-blue-500" />
+      : <FaSortDown size={12} className="ml-1 text-blue-500" />;
+  };
+
   const filteredShifts = shifts.filter((shift) =>
     shift.shift_code.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const sortedShifts = applySorting(filteredShifts, sortConfig);
 
   const {
     currentPage,
     setCurrentPage,
     totalPages,
     paginatedData: paginatedShifts,
-  } = usePagination(filteredShifts, rowsPerPage);
+  } = usePagination(sortedShifts, rowsPerPage);
 
   const exportShiftsToExcel = (shifts: ShiftRow[]) => {
     const worksheet = XLSX.utils.json_to_sheet(
@@ -120,24 +186,25 @@ export const Shifts = () => {
   };
 
   const handleSortByCode = () => {
-    setShifts((prev) =>
-      [...prev].sort((a, b) => a.shift_code.localeCompare(b.shift_code))
-    );
-    toast.info("Sorted by Shift Code");
+    handleSort('shift_code');
+    setMoreDropdownOpen(false);
+    setSortMenuOpen(false);
   };
 
   const handleSortByFromTime = () => {
-    setShifts((prev) =>
-      [...prev].sort((a, b) =>
-        a.shift_from_time.localeCompare(b.shift_from_time)
-      )
-    );
-    toast.info("Sorted by From Time");
+    handleSort('shift_from_time');
+    setMoreDropdownOpen(false);
+    setSortMenuOpen(false);
+  };
+
+  const handleSortByToTime = () => {
+    handleSort('shift_to_time');
+    setMoreDropdownOpen(false);
+    setSortMenuOpen(false);
   };
 
   return (
     <>
-      {/* <PageBreadcrumb pageTitle="Shifts" /> */}
       <ToastContainer position="bottom-right" autoClose={3000} />
 
       <div className="min-h-screen h-full w-full dark:bg-gray-900 flex flex-col">
@@ -161,7 +228,7 @@ export const Shifts = () => {
               <span className="">New</span>
             </button>
             <span
-              className="p-2 bg-gray-200 border-2 border-gray-50 rounded-lg cursor-pointer relative"
+              className="p-2 bg-gray-200 border-2 border-gray-50 rounded-lg cursor-pointer relative dark:bg-gray-700 dark:border-gray-600"
               onClick={(e) => {
                 e.stopPropagation();
                 setMoreDropdownOpen((prev) => !prev);
@@ -203,24 +270,22 @@ export const Shifts = () => {
                     {sortMenuOpen && (
                       <div className="absolute right-full top-0 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-40 py-1">
                         <button
-                          className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
-                          onClick={() => {
-                            setMoreDropdownOpen(false);
-                            setSortMenuOpen(false);
-                            handleSortByCode();
-                          }}
+                          className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
+                          onClick={handleSortByCode}
                         >
                           Sort by Shift Code
                         </button>
                         <button
-                          className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
-                          onClick={() => {
-                            setMoreDropdownOpen(false);
-                            setSortMenuOpen(false);
-                            handleSortByFromTime();
-                          }}
+                          className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
+                          onClick={handleSortByFromTime}
                         >
                           Sort by From Time
+                        </button>
+                        <button
+                          className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
+                          onClick={handleSortByToTime}
+                        >
+                          Sort by To Time
                         </button>
                       </div>
                     )}
@@ -242,10 +307,33 @@ export const Shifts = () => {
             <table className="w-full min-w-[900px] text-base bg-white dark:bg-gray-800">
               <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-sm">
                 <tr>
-                 
-                  <th className="px-4 py-3 text-[12px] text-left">Shift Code</th>
-                  <th className="px-4 py-3 text-[12px] text-left">From Time</th>
-                  <th className="px-4 py-3 text-[12px] text-left">To Time</th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    onClick={() => handleSort('shift_code')}
+                  >
+                    <div className="flex items-center">
+                      Shift Code
+                      {getSortIcon('shift_code')}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    onClick={() => handleSort('shift_from_time')}
+                  >
+                    <div className="flex items-center">
+                      From Time
+                      {getSortIcon('shift_from_time')}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    onClick={() => handleSort('shift_to_time')}
+                  >
+                    <div className="flex items-center">
+                      To Time
+                      {getSortIcon('shift_to_time')}
+                    </div>
+                  </th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
@@ -259,7 +347,6 @@ export const Shifts = () => {
                       onMouseEnter={() => setHoveredRow(shift.id)}
                       onMouseLeave={() => setHoveredRow(null)}
                     >
-                     
                       <td className="px-4 py-3 text-[12px] text-left">{shift.shift_code}</td>
                       <td className="px-4 py-3 text-[12px] text-left">{shift.shift_from_time}</td>
                       <td className="px-4 py-3 text-[12px] text-left">{shift.shift_to_time}</td>

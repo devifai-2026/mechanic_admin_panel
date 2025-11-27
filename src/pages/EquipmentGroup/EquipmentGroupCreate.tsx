@@ -57,7 +57,7 @@ export default function EquipmentGroupCreate() {
         });
         toast.success("Equipment Group created successfully!");
       }
-      setTimeout(() => navigate("/equipments/view"), 800);
+      setTimeout(() => navigate("/equipmentgroup/view"), 800);
     } catch (err) {
       toast.error("Failed to save Equipment Group");
     } finally {

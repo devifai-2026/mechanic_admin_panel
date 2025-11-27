@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { FaUpload, FaFileExcel, FaTimes, FaSpinner } from "react-icons/fa";
 import axiosInstance from "../../utils/axiosInstance";
 import DownloadTemplateButtonForEquipment from "../../utils/helperFunctions/excel_template_equipment";
@@ -6,6 +6,7 @@ import DownloadTemplateButtonForEquipment from "../../utils/helperFunctions/exce
 const EquipmentBulkUpload: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -22,6 +23,14 @@ const EquipmentBulkUpload: React.FC = () => {
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       setFile(e.dataTransfer.files[0]);
       e.dataTransfer.clearData();
+    }
+  };
+
+  const handleRemoveFile = () => {
+    setFile(null);
+    // Reset the file input to allow selecting the same file again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
   };
 
@@ -64,7 +73,7 @@ const EquipmentBulkUpload: React.FC = () => {
         alert("Bulk upload completed successfully!");
       }
 
-      setFile(null);
+      handleRemoveFile(); // Clear the file after successful upload
     } catch (error) {
       console.error("Upload failed:", error);
       alert("Upload failed. Please try again.");
@@ -72,7 +81,6 @@ const EquipmentBulkUpload: React.FC = () => {
       setIsUploading(false);
     }
   };
-
 
   return (
     <div
@@ -89,6 +97,7 @@ const EquipmentBulkUpload: React.FC = () => {
         <label className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md">
           <span>Browse files</span>
           <input
+            ref={fileInputRef}
             type="file"
             className="hidden"
             onChange={handleFileChange}
@@ -116,7 +125,7 @@ const EquipmentBulkUpload: React.FC = () => {
               </div>
             </div>
             <button
-              onClick={() => setFile(null)}
+              onClick={handleRemoveFile}
               className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
             >
               <FaTimes />

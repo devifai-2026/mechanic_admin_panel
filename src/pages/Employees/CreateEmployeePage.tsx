@@ -86,20 +86,22 @@ export const CreateEmployeePage = () => {
             <nav className="flex -mb-px">
               <button
                 onClick={() => setActiveTab("form")}
-                className={`flex items-center px-6 py-4 text-sm font-medium ${activeTab === "form"
-                  ? "border-b-2 border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20"
-                  : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-                  } transition-colors`}
+                className={`flex items-center px-6 py-4 text-sm font-medium ${
+                  activeTab === "form"
+                    ? "border-b-2 border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20"
+                    : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                } transition-colors`}
               >
                 <FaPlus className="mr-2" />
                 Single Employee
               </button>
               <button
                 onClick={() => setActiveTab("bulk")}
-                className={`flex items-center px-6 py-4 text-sm font-medium ${activeTab === "bulk"
-                  ? "border-b-2 border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20"
-                  : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-                  } transition-colors`}
+                className={`flex items-center px-6 py-4 text-sm font-medium ${
+                  activeTab === "bulk"
+                    ? "border-b-2 border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20"
+                    : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                } transition-colors`}
               >
                 <FaUpload className="mr-2" />
                 Bulk Upload
@@ -124,9 +126,12 @@ export const CreateEmployeePage = () => {
   );
 };
 
+
 const BulkUploadSection = () => {
   const [file, setFile] = React.useState<File | null>(null);
   const [isUploading, setIsUploading] = React.useState(false);
+  const navigate = useNavigate();
+  const fileInputRef = React.useRef<HTMLInputElement>(null); // Added useRef
 
   const dummyData = {
     emp_id: "EMP20701",
@@ -169,6 +174,15 @@ const BulkUploadSection = () => {
     }
   };
 
+  // New function to handle file removal
+  const handleRemoveFile = () => {
+    setFile(null);
+    // Reset the file input to allow selecting the same file again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   const handleUpload = async () => {
     if (!file) return;
     setIsUploading(true);
@@ -178,7 +192,7 @@ const BulkUploadSection = () => {
       formData.append("file", file);
 
       const response = await fetch(
-        "http://www.devifai.website/api/master/super/admin/employee/bulk-upload",
+        "https://www.devifai.website/api/master/super/admin/employee/bulk-upload",
         {
           method: "POST",
           body: formData,
@@ -200,11 +214,12 @@ const BulkUploadSection = () => {
               }}
             />
           );
+          navigate("/projects/view");
         } else {
           toast.success(
             `Bulk upload completed successfully! Created ${data.createdCount} employees.`
           );
-          setFile(null);
+          handleRemoveFile(); // Use the new function here
         }
       } else {
         toast.error(data.message || "Upload failed.");
@@ -235,6 +250,7 @@ const BulkUploadSection = () => {
         className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center hover:border-blue-400"
       >
         <input
+          ref={fileInputRef} // Added ref here
           type="file"
           accept=".csv,.xlsx"
           onChange={handleFileChange}
@@ -243,7 +259,9 @@ const BulkUploadSection = () => {
         />
         <label htmlFor="bulk-upload" className="cursor-pointer block">
           <FaUpload className="mx-auto text-blue-600 text-2xl" />
-          <p className="mt-2 text-sm text-gray-600">Browse or drag and drop Excel file</p>
+          <p className="mt-2 text-sm text-gray-600">
+            Browse or drag and drop Excel file
+          </p>
         </label>
         <p className="text-xs text-gray-400">Supported formats: CSV, XLSX</p>
       </div>
@@ -253,9 +271,11 @@ const BulkUploadSection = () => {
         <div className="p-4 bg-white dark:bg-gray-700 rounded-md flex justify-between items-center">
           <div>
             <p className="text-sm font-semibold">{file.name}</p>
-            <p className="text-xs text-gray-500">{(file.size / 1024).toFixed(2)} KB</p>
+            <p className="text-xs text-gray-500">
+              {(file.size / 1024).toFixed(2)} KB
+            </p>
           </div>
-          <button onClick={() => setFile(null)} className="text-red-500">
+          <button onClick={handleRemoveFile} className="text-red-500"> {/* Updated to use handleRemoveFile */}
             <FaTimes />
           </button>
         </div>
@@ -267,7 +287,9 @@ const BulkUploadSection = () => {
           onClick={handleUpload}
           disabled={!file || isUploading}
           className={`px-5 py-2 rounded-md text-white ${
-            !file || isUploading ? "bg-blue-300 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
+            !file || isUploading
+              ? "bg-blue-300 cursor-not-allowed"
+              : "bg-blue-600 hover:bg-blue-700"
           }`}
         >
           {isUploading ? (
@@ -298,4 +320,3 @@ const BulkUploadSection = () => {
     </div>
   );
 };
-

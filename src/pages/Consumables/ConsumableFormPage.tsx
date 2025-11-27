@@ -53,6 +53,19 @@ export default function ConsumableFormPage() {
     { label: "Services", value: "Services" },
   ];
 
+  // Filter accounts by group type
+  const assetAccounts = accounts.filter(account => 
+    account.group?.account_group_name?.toLowerCase() === "assets"
+  );
+  
+  const expenseAccounts = accounts.filter(account => 
+    account.group?.account_group_name?.toLowerCase() === "expenses"
+  );
+  
+  const incomeAccounts = accounts.filter(account => 
+    account.group?.account_group_name?.toLowerCase() === "income"
+  );
+
   useEffect(() => {
     Promise.all([
       getAllItemGroups(),
@@ -261,30 +274,33 @@ export default function ConsumableFormPage() {
               name="accIn"
               value={formData.accIn}
               onChange={handleChange}
-              options={accounts.map((a) => ({
-                label: a.account_name,
+              options={assetAccounts.map((a) => ({
+                label: `${a.account_code} - ${a.account_name}`,
                 value: a.id,
               }))}
+              helperText="Assets accounts only"
             />
             <SelectField
               label="Expense Account"
               name="accOut"
               value={formData.accOut}
               onChange={handleChange}
-              options={accounts.map((a) => ({
-                label: a.account_name,
+              options={expenseAccounts.map((a) => ({
+                label: `${a.account_code} - ${a.account_name}`,
                 value: a.id,
               }))}
+              helperText="Expenses accounts only"
             />
             <SelectField
               label="Revenue Account"
               name="revenue"
               value={formData.revenue}
               onChange={handleChange}
-              options={revenues.map((r) => ({
-                label: r.revenue_code,
+              options={incomeAccounts.map((r) => ({
+                label: `${r.account_code} - ${r.account_name}`,
                 value: r.id,
               }))}
+              helperText="Income accounts only"
             />
 
             <div className="col-span-1 md:col-span-2 flex justify-end gap-4 mt-6">
@@ -422,12 +438,14 @@ const SelectField = ({
   value,
   onChange,
   options,
+  helperText,
 }: {
   label: string;
   name: string;
   value: string;
   onChange: React.ChangeEventHandler<HTMLSelectElement>;
   options: { label: string; value: string }[];
+  helperText?: string;
 }) => (
   <div>
     <label className="mb-1 text-gray-700 dark:text-gray-200 font-medium">
@@ -446,5 +464,10 @@ const SelectField = ({
         </option>
       ))}
     </select>
+    {helperText && (
+      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+        {helperText}
+      </p>
+    )}
   </div>
 );

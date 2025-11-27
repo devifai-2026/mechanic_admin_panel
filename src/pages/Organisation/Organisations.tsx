@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-// import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import { usePagination } from "../../hooks/usePagination";
 import Pagination from "../../utils/Pagination";
 import { toast, ToastContainer } from "react-toastify";
 import { FaCircleChevronDown, FaPlus } from "react-icons/fa6";
 import { IoIosMore } from "react-icons/io";
+import { FaSortUp, FaSortDown } from "react-icons/fa";
 import { Organisation } from "../../types/organisationTypes";
 import {
   deleteOrganisation,
@@ -13,6 +13,11 @@ import {
 } from "../../apis/organisationApi";
 import OrganisationDrawer from "./OrganisationDrawer";
 import Title from "../../components/common/Title";
+
+type SortConfig = {
+  key: keyof Organisation | null;
+  direction: 'asc' | 'desc';
+};
 
 export const Organisations = () => {
   const [organisations, setOrganisations] = useState<Organisation[]>([]);
@@ -24,8 +29,54 @@ export const Organisations = () => {
   const [moreDropdownOpen, setMoreDropdownOpen] = useState(false);
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [rowsPerPage, setRowsPerPage] = useState(20);
-  const [searchTerm, setSearchTerm] = useState(""); // 🆕 Search input state
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: 'asc' });
   const navigate = useNavigate();
+
+  // Apply sorting
+  const applySorting = (data: Organisation[], config: SortConfig) => {
+    if (!config.key) return data;
+
+    return [...data].sort((a, b) => {
+      let aValue = a[config.key!];
+      let bValue = b[config.key!];
+
+      // Handle null/undefined values
+      if (aValue == null) aValue = '';
+      if (bValue == null) bValue = '';
+
+      // Handle string values
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return config.direction === 'asc' 
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+
+      return 0;
+    });
+  };
+
+  const handleSort = (key: keyof Organisation) => {
+    setSortConfig(currentConfig => ({
+      key,
+      direction: currentConfig.key === key && currentConfig.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const getSortIcon = (key: keyof Organisation) => {
+    if (sortConfig.key !== key) {
+      return (
+        <div className="inline-flex flex-col ml-1 opacity-30">
+          <FaSortUp size={10} className="-mb-1" />
+          <FaSortDown size={10} className="-mt-1" />
+        </div>
+      );
+    }
+    
+    return sortConfig.direction === 'asc' 
+      ? <FaSortUp size={12} className="ml-1 text-blue-500" />
+      : <FaSortDown size={12} className="ml-1 text-blue-500" />;
+  };
 
   const convertOrganisationsToCSV = (orgs: Organisation[]) => {
     const header = ["Organisation Name", "Organisation Code"];
@@ -68,12 +119,14 @@ export const Organisations = () => {
       org.org_code.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const sortedOrganisations = applySorting(filteredOrganisations, sortConfig);
+
   const {
     currentPage,
     setCurrentPage,
     totalPages,
     paginatedData: paginatedOrganisations,
-  } = usePagination(filteredOrganisations, rowsPerPage); // 🆕 use filtered data
+  } = usePagination(sortedOrganisations, rowsPerPage);
 
   const fetchAndSetOrganisations = async () => {
     setLoading(true);
@@ -121,36 +174,31 @@ export const Organisations = () => {
   };
 
   const handleSortByName = () => {
-    setOrganisations((prev) =>
-      [...prev].sort((a, b) => a.org_name.localeCompare(b.org_name))
-    );
-    toast.info("Sorted by Name");
+    handleSort('org_name');
+    setMoreDropdownOpen(false);
+    setSortMenuOpen(false);
   };
 
   const handleSortByCode = () => {
-    setOrganisations((prev) =>
-      [...prev].sort((a, b) => a.org_code.localeCompare(b.org_code))
-    );
-    toast.info("Sorted by Code");
+    handleSort('org_code');
+    setMoreDropdownOpen(false);
+    setSortMenuOpen(false);
   };
 
   return (
     <>
-      {/* <PageBreadcrumb pageTitle="Organisations" /> */}
       <ToastContainer position="bottom-right" autoClose={3000} />
       <div className="min-h-screen w-full dark:bg-gray-900 flex flex-col">
         <div className="flex justify-between items-center px-6">
           <Title pageTitle="Organisations" />
           <div className="flex justify-end items-center mb-4 gap-3">
-             <div className="">
-          <input
-            type="text"
-            placeholder="Search by Name or Code"
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-900 dark:text-white"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
+            <input
+              type="text"
+              placeholder="Search by Name or Code"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-900 dark:text-white"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
             <button
               onClick={() => navigate("/organisations/create")}
               className="flex items-center justify-center gap-2 px-4 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition"
@@ -159,7 +207,7 @@ export const Organisations = () => {
               <span>New</span>
             </button>
             <span
-              className="p-2 bg-gray-200 border-2 border-gray-50 rounded-lg cursor-pointer relative"
+              className="p-2 bg-gray-200 border-2 border-gray-50 rounded-lg cursor-pointer relative dark:bg-gray-700 dark:border-gray-600"
               onClick={(e) => {
                 e.stopPropagation();
                 setMoreDropdownOpen((prev) => !prev);
@@ -202,21 +250,13 @@ export const Organisations = () => {
                       <div className="absolute right-full top-0 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-40 py-1">
                         <button
                           className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
-                          onClick={() => {
-                            setMoreDropdownOpen(false);
-                            setSortMenuOpen(false);
-                            handleSortByName();
-                          }}
+                          onClick={handleSortByName}
                         >
                           Sort by Name
                         </button>
                         <button
                           className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
-                          onClick={() => {
-                            setMoreDropdownOpen(false);
-                            setSortMenuOpen(false);
-                            handleSortByCode();
-                          }}
+                          onClick={handleSortByCode}
                         >
                           Sort by Code
                         </button>
@@ -229,9 +269,6 @@ export const Organisations = () => {
           </div>
         </div>
 
-        {/* 🆕 Search bar */}
-       
-
         <div className="overflow-x-auto flex-1 w-full overflow-auto pb-6">
           {loading ? (
             <div className="flex justify-center items-center py-10">
@@ -243,9 +280,24 @@ export const Organisations = () => {
             <table className="w-full min-w-[700px] text-base bg-white dark:bg-gray-800">
               <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-sm">
                 <tr>
-                 
-                  <th className="px-4 py-3 text-[12px] text-left">Organisation Code</th>
-                  <th className="px-4 py-3 text-[12px] text-left">Organisation Name</th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    onClick={() => handleSort('org_code')}
+                  >
+                    <div className="flex items-center">
+                      Organisation Code
+                      {getSortIcon('org_code')}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    onClick={() => handleSort('org_name')}
+                  >
+                    <div className="flex items-center">
+                      Organisation Name
+                      {getSortIcon('org_name')}
+                    </div>
+                  </th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
@@ -258,7 +310,6 @@ export const Organisations = () => {
                     onMouseEnter={() => setHoveredRow(org.id)}
                     onMouseLeave={() => setHoveredRow(null)}
                   >
-                  
                     <td className="px-4 py-3 text-[12px] text-left">{org.org_code}</td>
                     <td className="px-4 py-3 text-[12px] text-left">{org.org_name}</td>
                     <td className="flex justify-center gap-2 relative">

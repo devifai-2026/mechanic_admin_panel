@@ -5,10 +5,16 @@ import Pagination from "../../utils/Pagination";
 import { toast, ToastContainer } from "react-toastify";
 import { FaCircleChevronDown, FaPlus } from "react-icons/fa6";
 import { IoIosMore } from "react-icons/io";
+import { FaSortUp, FaSortDown } from "react-icons/fa";
 import ItemGroupDrawer from "./ItemGroupDrawer";
 import { ItemGroup } from "../../types/itemGroupTypes";
 import { deleteItemGroup, getAllItemGroups } from "../../apis/intemGroupApi";
 import Title from "../../components/common/Title";
+
+type SortConfig = {
+  key: keyof ItemGroup | null;
+  direction: 'asc' | 'desc';
+};
 
 export const ItemGroupPage = () => {
   const [itemGroups, setItemGroups] = useState<ItemGroup[]>([]);
@@ -20,7 +26,53 @@ export const ItemGroupPage = () => {
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: 'asc' });
   const navigate = useNavigate();
+
+  // Apply sorting
+  const applySorting = (data: ItemGroup[], config: SortConfig) => {
+    if (!config.key) return data;
+
+    return [...data].sort((a, b) => {
+      let aValue = a[config.key!];
+      let bValue = b[config.key!];
+
+      // Handle null/undefined values
+      if (aValue == null) aValue = '';
+      if (bValue == null) bValue = '';
+
+      // Handle string values
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return config.direction === 'asc' 
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+
+      return 0;
+    });
+  };
+
+  const handleSort = (key: keyof ItemGroup) => {
+    setSortConfig(currentConfig => ({
+      key,
+      direction: currentConfig.key === key && currentConfig.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const getSortIcon = (key: keyof ItemGroup) => {
+    if (sortConfig.key !== key) {
+      return (
+        <div className="inline-flex flex-col ml-1 opacity-30">
+          <FaSortUp size={10} className="-mb-1" />
+          <FaSortDown size={10} className="-mt-1" />
+        </div>
+      );
+    }
+    
+    return sortConfig.direction === 'asc' 
+      ? <FaSortUp size={12} className="ml-1 text-blue-500" />
+      : <FaSortDown size={12} className="ml-1 text-blue-500" />;
+  };
 
   const filteredItemGroups = itemGroups.filter(
     (group) =>
@@ -28,12 +80,14 @@ export const ItemGroupPage = () => {
       group.group_code.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const sortedItemGroups = applySorting(filteredItemGroups, sortConfig);
+
   const {
     currentPage,
     setCurrentPage,
     totalPages,
     paginatedData: paginatedItemGroups,
-  } = usePagination(filteredItemGroups, rowsPerPage);
+  } = usePagination(sortedItemGroups, rowsPerPage);
 
   const handleExport = () => {
     if (!filteredItemGroups.length) {
@@ -106,17 +160,15 @@ export const ItemGroupPage = () => {
   };
 
   const handleSortByName = () => {
-    setItemGroups((prev) =>
-      [...prev].sort((a, b) => a.group_name.localeCompare(b.group_name))
-    );
-    toast.info("Sorted by Name");
+    handleSort('group_name');
+    setMoreDropdownOpen(false);
+    setSortMenuOpen(false);
   };
 
   const handleSortByCode = () => {
-    setItemGroups((prev) =>
-      [...prev].sort((a, b) => a.group_code.localeCompare(b.group_code))
-    );
-    toast.info("Sorted by Code");
+    handleSort('group_code');
+    setMoreDropdownOpen(false);
+    setSortMenuOpen(false);
   };
 
   return (
@@ -126,15 +178,15 @@ export const ItemGroupPage = () => {
         <div className="flex justify-between items-center px-6">
           <Title pageTitle="Item Groups" />
           <div className="flex justify-end items-center mb-4 gap-3">
-             <div className="px-6 ">
-          <input
-            type="text"
-            placeholder="Search by name or code"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-md text-sm dark:bg-gray-700 dark:text-white dark:border-gray-600"
-          />
-        </div>
+            <div className="px-6">
+              <input
+                type="text"
+                placeholder="Search by name or code"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white dark:border-gray-600"
+              />
+            </div>
 
             <button
               onClick={() => navigate("/itemgroup/create")}
@@ -144,7 +196,7 @@ export const ItemGroupPage = () => {
               <span>New</span>
             </button>
             <span
-              className="p-2 bg-gray-200 border-2 border-gray-50 rounded-lg cursor-pointer relative"
+              className="p-2 bg-gray-200 border-2 border-gray-50 rounded-lg cursor-pointer relative dark:bg-gray-700 dark:border-gray-600"
               onClick={(e) => {
                 e.stopPropagation();
                 setMoreDropdownOpen((prev) => !prev);
@@ -187,21 +239,13 @@ export const ItemGroupPage = () => {
                       <div className="absolute right-full top-0 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-40 py-1">
                         <button
                           className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
-                          onClick={() => {
-                            setMoreDropdownOpen(false);
-                            setSortMenuOpen(false);
-                            handleSortByName();
-                          }}
+                          onClick={handleSortByName}
                         >
                           Sort by Name
                         </button>
                         <button
                           className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
-                          onClick={() => {
-                            setMoreDropdownOpen(false);
-                            setSortMenuOpen(false);
-                            handleSortByCode();
-                          }}
+                          onClick={handleSortByCode}
                         >
                           Sort by Code
                         </button>
@@ -214,7 +258,6 @@ export const ItemGroupPage = () => {
           </div>
         </div>
 
-       
         <div className="overflow-x-auto flex-1 w-full overflow-auto pb-6">
           {loading ? (
             <div className="flex justify-center items-center py-10">
@@ -226,9 +269,24 @@ export const ItemGroupPage = () => {
             <table className="w-full min-w-[700px] text-base bg-white dark:bg-gray-800">
               <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-sm">
                 <tr>
-      
-                  <th className="px-4 py-3 text-[12px] text-left">Group Code</th>
-                  <th className="px-4 py-3 text-[12px] text-left">Group Name</th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    onClick={() => handleSort('group_code')}
+                  >
+                    <div className="flex items-center">
+                      Group Code
+                      {getSortIcon('group_code')}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    onClick={() => handleSort('group_name')}
+                  >
+                    <div className="flex items-center">
+                      Group Name
+                      {getSortIcon('group_name')}
+                    </div>
+                  </th>
                   <th className="px-4 py-3 text-[12px]"></th>
                 </tr>
               </thead>
@@ -241,7 +299,6 @@ export const ItemGroupPage = () => {
                     onMouseEnter={() => setHoveredRow(group.id)}
                     onMouseLeave={() => setHoveredRow(null)}
                   >
-                 
                     <td className="px-4 py-3 text-[12px] text-left">{group.group_code}</td>
                     <td className="px-4 py-3 text-[12px] text-left">{group.group_name}</td>
                     <td className="flex justify-center gap-2 relative">

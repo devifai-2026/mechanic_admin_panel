@@ -5,54 +5,104 @@ import { usePagination } from "../../hooks/usePagination";
 import { toast, ToastContainer } from "react-toastify";
 import { FaCircleChevronDown, FaPlus } from "react-icons/fa6";
 import { IoIosMore } from "react-icons/io";
+import { FaSortUp, FaSortDown } from "react-icons/fa";
 import EquipmentDrawer from "./EquipmentDrawer";
 import { useNavigate } from "react-router";
 import Title from "../../components/common/Title";
 
+type EquipmentRow = {
+  id: string;
+  equipment_name: string;
+  equipment_sr_no: string;
+  additional_id: string;
+  purchase_date: string;
+  oem: string;
+  purchase_cost: number;
+  equipment_group_id: string;
+  oemDetails?: {
+    oem_code: string;
+  };
+  equipmentGroup?: Array<{
+    equipment_group: string;
+  }>;
+};
+
+type SortConfig = {
+  key: keyof EquipmentRow | null;
+  direction: 'asc' | 'desc';
+};
+
 export const Equipments = () => {
-  const [equipments, setEquipments] = useState<any[]>([]);
-  const [selectedEquipment, setSelectedEquipment] = useState<any | null>(null);
+  const [equipments, setEquipments] = useState<EquipmentRow[]>([]);
+  const [selectedEquipment, setSelectedEquipment] = useState<EquipmentRow | null>(null);
   const [loading, setLoading] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
-  // const [equipmentGroups, setEquipmentGroups] = useState<any[]>([]);
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
   const [moreDropdownOpen, setMoreDropdownOpen] = useState(false);
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortField, setSortField] = useState<string>("");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: 'asc' });
 
   const navigate = useNavigate();
 
-  // Sort equipments
-  const sortEquipments = (equipments: any[]) => {
-    if (!sortField) return equipments;
+  // Apply sorting
+  const applySorting = (data: EquipmentRow[], config: SortConfig) => {
+    if (!config.key) return data;
 
-    return [...equipments].sort((a, b) => {
-      let aValue = a[sortField];
-      let bValue = b[sortField];
+    return [...data].sort((a, b) => {
+      let aValue = a[config.key!];
+      let bValue = b[config.key!];
+
+      // Handle null/undefined values
+      if (aValue == null) aValue = '';
+      if (bValue == null) bValue = '';
 
       // Handle date sorting
-      if (sortField === "purchase_date") {
-        aValue = new Date(aValue).getTime();
-        bValue = new Date(bValue).getTime();
+      if (config.key === 'purchase_date') {
+        const aDate = new Date(aValue).getTime();
+        const bDate = new Date(bValue).getTime();
+        return config.direction === 'asc' ? aDate - bDate : bDate - aDate;
       }
 
       // Handle numeric sorting for purchase cost
-      if (sortField === "purchase_cost") {
-        aValue = Number(aValue) || 0;
-        bValue = Number(bValue) || 0;
+      if (config.key === 'purchase_cost') {
+        const aNum = Number(aValue) || 0;
+        const bNum = Number(bValue) || 0;
+        return config.direction === 'asc' ? aNum - bNum : bNum - aNum;
       }
 
-      if (aValue < bValue) {
-        return sortDirection === "asc" ? -1 : 1;
+      // Handle string values
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return config.direction === 'asc' 
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
       }
-      if (aValue > bValue) {
-        return sortDirection === "asc" ? 1 : -1;
-      }
+
       return 0;
     });
+  };
+
+  const handleSort = (key: keyof EquipmentRow) => {
+    setSortConfig(currentConfig => ({
+      key,
+      direction: currentConfig.key === key && currentConfig.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const getSortIcon = (key: keyof EquipmentRow) => {
+    if (sortConfig.key !== key) {
+      return (
+        <div className="inline-flex flex-col ml-1 opacity-30">
+          <FaSortUp size={10} className="-mb-1" />
+          <FaSortDown size={10} className="-mt-1" />
+        </div>
+      );
+    }
+    
+    return sortConfig.direction === 'asc' 
+      ? <FaSortUp size={12} className="ml-1 text-blue-500" />
+      : <FaSortDown size={12} className="ml-1 text-blue-500" />;
   };
 
   // Filtered and sorted data
@@ -62,7 +112,7 @@ export const Equipments = () => {
       eq.equipment_sr_no.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const sortedEquipments = sortEquipments(filteredEquipments);
+  const sortedEquipments = applySorting(filteredEquipments, sortConfig);
 
   const {
     currentPage,
@@ -71,7 +121,7 @@ export const Equipments = () => {
     paginatedData: paginatedEquipments,
   } = usePagination(sortedEquipments, rowsPerPage);
 
-  const exportToCSV = (data: any[]) => {
+  const exportToCSV = (data: EquipmentRow[]) => {
     if (!data || data.length === 0) {
       toast.warn("No data available to export");
       return;
@@ -92,9 +142,9 @@ export const Equipments = () => {
       item.equipment_sr_no,
       item.additional_id,
       item.purchase_date,
-      item.oem,
+      item.oemDetails?.oem_code || '',
       item.purchase_cost,
-      item.equipment_group_id,
+      item.equipmentGroup?.map((group: any) => group.equipment_group).join(', ') || '',
     ]);
 
     let csvContent =
@@ -112,37 +162,31 @@ export const Equipments = () => {
     toast.success("Exported successfully!");
   };
 
-  const handleSort = (field: string) => {
-    if (sortField === field) {
-      // Toggle direction if same field
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-    } else {
-      // Set new field with ascending direction
-      setSortField(field);
-      setSortDirection("asc");
-    }
-    setSortMenuOpen(false);
+  const handleSortByName = () => {
+    handleSort('equipment_name');
     setMoreDropdownOpen(false);
-
-    const fieldName =
-      field === "purchase_cost" ? "Purchase Cost" : "Purchase Date";
-    const direction =
-      sortField === field
-        ? sortDirection === "asc"
-          ? "descending"
-          : "ascending"
-        : "ascending";
-    toast.info(`Sorted by ${fieldName} ${direction}`);
+    setSortMenuOpen(false);
   };
 
-  const getSortIndicator = (field: string) => {
-    if (sortField !== field) return null;
-    return sortDirection === "asc" ? " ↑" : " ↓";
+  const handleSortBySerialNo = () => {
+    handleSort('equipment_sr_no');
+    setMoreDropdownOpen(false);
+    setSortMenuOpen(false);
+  };
+
+  const handleSortByPurchaseCost = () => {
+    handleSort('purchase_cost');
+    setMoreDropdownOpen(false);
+    setSortMenuOpen(false);
+  };
+
+  const handleSortByPurchaseDate = () => {
+    handleSort('purchase_date');
+    setMoreDropdownOpen(false);
+    setSortMenuOpen(false);
   };
 
   useEffect(() => {
-   
-
     const fetchAndSetEquipments = async () => {
       setLoading(true);
       try {
@@ -154,7 +198,6 @@ export const Equipments = () => {
       setLoading(false);
     };
 
-   
     fetchAndSetEquipments();
   }, []);
 
@@ -174,11 +217,11 @@ export const Equipments = () => {
     }
   }, [dropdownOpen]);
 
-  const handleView = (equipment: any) => {
+  const handleView = (equipment: EquipmentRow) => {
     setSelectedEquipment(equipment);
   };
 
-  const handleDelete = async (equipment: any) => {
+  const handleDelete = async (equipment: EquipmentRow) => {
     if (window.confirm("Are you sure you want to delete this equipment?")) {
       setLoading(true);
       try {
@@ -207,7 +250,7 @@ export const Equipments = () => {
               placeholder="Search by Name or Serial No"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="px-3 py-1 border rounded-md text-sm w-[200px] focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-1 border rounded-md text-sm w-[200px] focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white dark:border-gray-600"
             />
             <button
               onClick={() => navigate("/equipments/create")}
@@ -217,7 +260,7 @@ export const Equipments = () => {
               <span>New</span>
             </button>
             <span
-              className="p-2 bg-gray-200 border-2 border-gray-50 rounded-lg cursor-pointer relative"
+              className="p-2 bg-gray-200 border-2 border-gray-50 rounded-lg cursor-pointer relative dark:bg-gray-700 dark:border-gray-600"
               onClick={(e) => {
                 e.stopPropagation();
                 setMoreDropdownOpen((prev) => !prev);
@@ -260,17 +303,27 @@ export const Equipments = () => {
                       <div className="absolute right-full top-0 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-40 py-1">
                         <button
                           className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
-                          onClick={() => handleSort("purchase_cost")}
+                          onClick={handleSortByName}
                         >
-                          Sort by Purchase Cost
-                          {getSortIndicator("purchase_cost")}
+                          Sort by Name
                         </button>
                         <button
                           className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
-                          onClick={() => handleSort("purchase_date")}
+                          onClick={handleSortBySerialNo}
+                        >
+                          Sort by Serial No
+                        </button>
+                        <button
+                          className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                          onClick={handleSortByPurchaseCost}
+                        >
+                          Sort by Purchase Cost
+                        </button>
+                        <button
+                          className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                          onClick={handleSortByPurchaseDate}
                         >
                           Sort by Purchase Date
-                          {getSortIndicator("purchase_date")}
                         </button>
                       </div>
                     )}
@@ -292,28 +345,45 @@ export const Equipments = () => {
             <table className="w-full min-w-[900px] text-base bg-white dark:bg-gray-800">
               <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-sm">
                 <tr>
-                 
-                  <th className="px-4 py-3 text-[12px] text-left">
-                    Equipment Name
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    onClick={() => handleSort('equipment_name')}
+                  >
+                    <div className="flex items-center">
+                      Equipment Name
+                      {getSortIcon('equipment_name')}
+                    </div>
                   </th>
-                  <th className="px-4 py-3 text-[12px] text-left">
-                    Equipment Serial No
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    onClick={() => handleSort('equipment_sr_no')}
+                  >
+                    <div className="flex items-center">
+                      Equipment Serial No
+                      {getSortIcon('equipment_sr_no')}
+                    </div>
                   </th>
                   <th className="px-4 py-3 text-[12px] text-left">
                     Additional ID
                   </th>
                   <th
-                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
-                    onClick={() => handleSort("purchase_date")}
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    onClick={() => handleSort('purchase_date')}
                   >
-                    Purchase Date{getSortIndicator("purchase_date")}
+                    <div className="flex items-center">
+                      Purchase Date
+                      {getSortIcon('purchase_date')}
+                    </div>
                   </th>
                   <th className="px-4 py-3 text-[12px] text-left">OEM</th>
                   <th
-                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
-                    onClick={() => handleSort("purchase_cost")}
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    onClick={() => handleSort('purchase_cost')}
                   >
-                    Purchase Cost{getSortIndicator("purchase_cost")}
+                    <div className="flex items-center">
+                      Purchase Cost
+                      {getSortIcon('purchase_cost')}
+                    </div>
                   </th>
                   <th className="px-4 py-3 text-[12px] text-left">Group</th>
                   <th className="px-4 py-3 text-[12px]"></th>
@@ -328,7 +398,6 @@ export const Equipments = () => {
                     onMouseEnter={() => setHoveredRow(equipment.id)}
                     onMouseLeave={() => setHoveredRow(null)}
                   >
-                   
                     <td className="px-4 py-3 text-[12px] text-left">
                       {equipment.equipment_name}
                     </td>
@@ -393,14 +462,17 @@ export const Equipments = () => {
                             className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
                             onClick={() => {
                               navigate(`/equipments/edit/${equipment.id}`);
-                              toast.info("Edit clicked");
+                              setDropdownOpen(null);
                             }}
                           >
                             Edit
                           </button>
                           <button
                             className="block w-full text-left px-4 py-2 text-sm hover:bg-red-500 hover:text-white dark:hover:bg-gray-700 transition"
-                            onClick={() => handleDelete(equipment)}
+                            onClick={() => {
+                              handleDelete(equipment);
+                              setDropdownOpen(null);
+                            }}
                           >
                             Delete
                           </button>

@@ -4,7 +4,7 @@ import { handleExport } from "../../utils/helperFunctions/downloadExcel_forProje
 import { usePagination } from "../../hooks/usePagination";
 import Pagination from "../../utils/Pagination";
 import { FaCircleChevronDown, FaPlus } from "react-icons/fa6";
-import { FaSortAmountUp, FaSortAmountDown } from "react-icons/fa";
+import { FaSortAmountUp, FaSortAmountDown, FaSortUp, FaSortDown } from "react-icons/fa";
 import { toast, ToastContainer } from "react-toastify";
 import ProjectDrawer from "./ProjectDrawer";
 import { useNavigate } from "react-router";
@@ -25,20 +25,23 @@ type ProjectRow = {
   locations: number;
 };
 
+type SortConfig = {
+  key: keyof ProjectRow | null;
+  direction: 'asc' | 'desc';
+};
+
 export const Projects = () => {
   const [projects, setProjects] = useState<ProjectRow[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [selectedProject, setSelectedProject] = useState<ProjectRow | null>(
-    null
-  );
+  const [selectedProject, setSelectedProject] = useState<ProjectRow | null>(null);
   const [loading, setLoading] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [rawProjects, setRawProjects] = useState<any[]>([]);
   const [optionsDropdownOpen, setOptionsDropdownOpen] = useState(false);
-  const [sortAsc, setSortAsc] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: 'asc' });
 
   const {
     currentPage,
@@ -117,8 +120,59 @@ export const Projects = () => {
       };
     });
 
-    setProjects(simplified);
-  }, [searchQuery, rawProjects]);
+    // Apply sorting after filtering and mapping
+    const sortedProjects = applySorting(simplified, sortConfig);
+    setProjects(sortedProjects);
+  }, [searchQuery, rawProjects, sortConfig]);
+
+  const applySorting = (data: ProjectRow[], config: SortConfig) => {
+    if (!config.key) return data;
+
+    return [...data].sort((a, b) => {
+      let aValue = a[config.key!];
+      let bValue = b[config.key!];
+
+      // Handle null/undefined values
+      if (aValue == null) aValue = '';
+      if (bValue == null) bValue = '';
+
+      // Handle numeric values
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return config.direction === 'asc' ? aValue - bValue : bValue - aValue;
+      }
+
+      // Handle string values
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return config.direction === 'asc' 
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+
+      return 0;
+    });
+  };
+
+  const handleSort = (key: keyof ProjectRow) => {
+    setSortConfig(currentConfig => ({
+      key,
+      direction: currentConfig.key === key && currentConfig.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const getSortIcon = (key: keyof ProjectRow) => {
+    if (sortConfig.key !== key) {
+      return (
+        <div className="inline-flex flex-col ml-1 opacity-30">
+          <FaSortUp size={10} className="-mb-1" />
+          <FaSortDown size={10} className="-mt-1" />
+        </div>
+      );
+    }
+    
+    return sortConfig.direction === 'asc' 
+      ? <FaSortUp size={12} className="ml-1 text-blue-500" />
+      : <FaSortDown size={12} className="ml-1 text-blue-500" />;
+  };
 
   useEffect(() => {
     const handleClickOutside = () => {
@@ -154,14 +208,11 @@ export const Projects = () => {
     toast.success("Exported as Excel!");
   };
 
-  const handleSort = () => {
-    const sorted = [...projects].sort((a, b) =>
-      sortAsc
-        ? a.projectNo.localeCompare(b.projectNo)
-        : b.projectNo.localeCompare(a.projectNo)
-    );
-    setProjects(sorted);
-    setSortAsc(!sortAsc);
+  const handleGlobalSort = () => {
+    setSortConfig(currentConfig => ({
+      key: 'projectNo',
+      direction: currentConfig.key === 'projectNo' && currentConfig.direction === 'asc' ? 'desc' : 'asc'
+    }));
   };
 
   return (
@@ -217,12 +268,12 @@ export const Projects = () => {
                 <button
                   className="w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
                   onClick={() => {
-                    handleSort();
+                    handleGlobalSort();
                     setOptionsDropdownOpen(false);
                   }}
                 >
-                  {sortAsc ? <FaSortAmountDown /> : <FaSortAmountUp />}
-                  <span>Sort {sortAsc ? "Asc" : "Desc"}</span>
+                  {sortConfig.direction === 'asc' ? <FaSortAmountDown /> : <FaSortAmountUp />}
+                  <span>Sort {sortConfig.direction === 'asc' ? "Asc" : "Desc"}</span>
                 </button>
               </div>
             )}
@@ -246,35 +297,90 @@ export const Projects = () => {
                   <table className="w-full min-w-full text-base">
                     <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-sm sticky top-0 z-10">
                       <tr>
-                       
-                        <th className="px-4 py-3 text-[12px] text-left">
-                          Project No
+                        <th 
+                          className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                          onClick={() => handleSort('projectNo')}
+                        >
+                          <div className="flex items-center">
+                            Project No
+                            {getSortIcon('projectNo')}
+                          </div>
+                        </th>
+                        <th 
+                          className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                          onClick={() => handleSort('customer')}
+                        >
+                          <div className="flex items-center">
+                            Customer
+                            {getSortIcon('customer')}
+                          </div>
+                        </th>
+                        <th 
+                          className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                          onClick={() => handleSort('orderNo')}
+                        >
+                          <div className="flex items-center">
+                            Order No
+                            {getSortIcon('orderNo')}
+                          </div>
+                        </th>
+                        <th 
+                          className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                          onClick={() => handleSort('contractStart')}
+                        >
+                          <div className="flex items-center">
+                            Contract Start
+                            {getSortIcon('contractStart')}
+                          </div>
+                        </th>
+                        <th 
+                          className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                          onClick={() => handleSort('duration')}
+                        >
+                          <div className="flex items-center">
+                            Duration
+                            {getSortIcon('duration')}
+                          </div>
+                        </th>
+                        <th 
+                          className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                          onClick={() => handleSort('revenues')}
+                        >
+                          <div className="flex items-center">
+                            Revenues
+                            {getSortIcon('revenues')}
+                          </div>
+                        </th>
+                        <th 
+                          className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                          onClick={() => handleSort('equipments')}
+                        >
+                          <div className="flex items-center">
+                            Equipments
+                            {getSortIcon('equipments')}
+                          </div>
+                        </th>
+                        <th 
+                          className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                          onClick={() => handleSort('staff')}
+                        >
+                          <div className="flex items-center">
+                            Staff
+                            {getSortIcon('staff')}
+                          </div>
+                        </th>
+                        <th 
+                          className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                          onClick={() => handleSort('locations')}
+                        >
+                          <div className="flex items-center">
+                            Locations
+                            {getSortIcon('locations')}
+                          </div>
                         </th>
                         <th className="px-4 py-3 text-[12px] text-left">
-                          Customer
+                          Actions
                         </th>
-                        <th className="px-4 py-3 text-[12px] text-left">
-                          Order No
-                        </th>
-                        <th className="px-4 py-3 text-[12px] text-left">
-                          Contract Start
-                        </th>
-                        <th className="px-4 py-3 text-[12px] text-left">
-                          Duration
-                        </th>
-                        <th className="px-4 py-3 text-[12px] text-left">
-                          Revenues
-                        </th>
-                        <th className="px-4 py-3 text-[12px] text-left">
-                          Equipments
-                        </th>
-                        <th className="px-4 py-3 text-[12px] text-left">
-                          Staff
-                        </th>
-                        <th className="px-4 py-3 text-[12px] text-left">
-                          Locations
-                        </th>
-                        <th className="px-4 py-3 text-[12px] text-left"></th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 dark:divide-gray-600 text-gray-800 dark:text-gray-100 text-center">
@@ -290,7 +396,6 @@ export const Projects = () => {
                           onMouseEnter={() => setHoveredRow(project.projectNo)}
                           onMouseLeave={() => setHoveredRow(null)}
                         >
-                        
                           <td className="px-4 py-2 text-[12px] text-left">
                             {project.projectNo}
                           </td>

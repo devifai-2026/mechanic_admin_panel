@@ -23,9 +23,9 @@ export const CreateProjectPage = () => {
   const [editData, setEditData] = useState<any | null>(null);
 
   const { id } = useParams<{ id: any }>();
-  
+
   console.log({ editData });
-  
+
   useEffect(() => {
     if (id) {
       const fetchEditData = async () => {
@@ -98,6 +98,7 @@ export const CreateProjectPage = () => {
                     } else {
                       await createProject(projectData);
                       toast.success("Project created successfully");
+                      navigate("/projects/view");
                     }
                   } catch (error) {
                     let errorMessage = "An unexpected error occurred";
@@ -127,7 +128,7 @@ const BulkUploadSection = () => {
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-
+  const navigate = useNavigate();
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
@@ -187,6 +188,7 @@ const BulkUploadSection = () => {
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
+      navigate("/projects/view");
     } catch (error) {
       console.error("Upload failed:", error);
       alert("Upload failed. Please try again.");

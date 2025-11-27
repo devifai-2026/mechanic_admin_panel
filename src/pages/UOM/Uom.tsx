@@ -5,12 +5,18 @@ import Pagination from "../../utils/Pagination";
 import { toast, ToastContainer } from "react-toastify";
 import { FaCircleChevronDown, FaPlus } from "react-icons/fa6";
 import { IoIosMore } from "react-icons/io";
+import { FaSortUp, FaSortDown } from "react-icons/fa";
 import UomDrawer from "./UomDrawer";
 import { getAllUOMs, deleteUOM } from "../../apis/uomApi";
 import { UOM } from "../../types/uomTypes";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import Title from "../../components/common/Title";
+
+type SortConfig = {
+  key: keyof UOM | null;
+  direction: 'asc' | 'desc';
+};
 
 export const Uom = () => {
   const [uoms, setUoms] = useState<UOM[]>([]);
@@ -23,7 +29,53 @@ export const Uom = () => {
   const [moreDropdownOpen, setMoreDropdownOpen] = useState(false);
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [rowsPerPage, setRowsPerPage] = useState(20);
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: 'asc' });
   const navigate = useNavigate();
+
+  // Apply sorting
+  const applySorting = (data: UOM[], config: SortConfig) => {
+    if (!config.key) return data;
+
+    return [...data].sort((a, b) => {
+      let aValue = a[config.key!];
+      let bValue = b[config.key!];
+
+      // Handle null/undefined values
+      if (aValue == null) aValue = '';
+      if (bValue == null) bValue = '';
+
+      // Handle string values
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return config.direction === 'asc' 
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+
+      return 0;
+    });
+  };
+
+  const handleSort = (key: keyof UOM) => {
+    setSortConfig(currentConfig => ({
+      key,
+      direction: currentConfig.key === key && currentConfig.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const getSortIcon = (key: keyof UOM) => {
+    if (sortConfig.key !== key) {
+      return (
+        <div className="inline-flex flex-col ml-1 opacity-30">
+          <FaSortUp size={10} className="-mb-1" />
+          <FaSortDown size={10} className="-mt-1" />
+        </div>
+      );
+    }
+    
+    return sortConfig.direction === 'asc' 
+      ? <FaSortUp size={12} className="ml-1 text-blue-500" />
+      : <FaSortDown size={12} className="ml-1 text-blue-500" />;
+  };
 
   const exportToExcel = () => {
     if (filteredUoms.length === 0) {
@@ -97,9 +149,10 @@ export const Uom = () => {
         uom.unit_name.toLowerCase().includes(term) ||
         uom.unit_code.toLowerCase().includes(term)
     );
-    setFilteredUoms(filtered);
+    const sortedFiltered = applySorting(filtered, sortConfig);
+    setFilteredUoms(sortedFiltered);
     setCurrentPage(1); // reset pagination when search term changes
-  }, [searchTerm, uoms]);
+  }, [searchTerm, uoms, sortConfig]);
 
   const handleDelete = async (uom: UOM) => {
     if (window.confirm("Are you sure you want to delete this UOM?")) {
@@ -116,17 +169,15 @@ export const Uom = () => {
   };
 
   const handleSortByName = () => {
-    setFilteredUoms((prev) =>
-      [...prev].sort((a, b) => a.unit_name.localeCompare(b.unit_name))
-    );
-    toast.info("Sorted by Name");
+    handleSort('unit_name');
+    setMoreDropdownOpen(false);
+    setSortMenuOpen(false);
   };
 
   const handleSortByCode = () => {
-    setFilteredUoms((prev) =>
-      [...prev].sort((a, b) => a.unit_code.localeCompare(b.unit_code))
-    );
-    toast.info("Sorted by Code");
+    handleSort('unit_code');
+    setMoreDropdownOpen(false);
+    setSortMenuOpen(false);
   };
 
   return (
@@ -151,7 +202,7 @@ export const Uom = () => {
               <span>New</span>
             </button>
             <span
-              className="p-2 bg-gray-200 border-2 border-gray-50 rounded-lg cursor-pointer relative"
+              className="p-2 bg-gray-200 border-2 border-gray-50 rounded-lg cursor-pointer relative dark:bg-gray-700 dark:border-gray-600"
               onClick={(e) => {
                 e.stopPropagation();
                 setMoreDropdownOpen((prev) => !prev);
@@ -194,21 +245,13 @@ export const Uom = () => {
                       <div className="absolute right-full top-0 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-40 py-1">
                         <button
                           className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
-                          onClick={() => {
-                            setMoreDropdownOpen(false);
-                            setSortMenuOpen(false);
-                            handleSortByName();
-                          }}
+                          onClick={handleSortByName}
                         >
                           Sort by Name
                         </button>
                         <button
                           className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
-                          onClick={() => {
-                            setMoreDropdownOpen(false);
-                            setSortMenuOpen(false);
-                            handleSortByCode();
-                          }}
+                          onClick={handleSortByCode}
                         >
                           Sort by Code
                         </button>
@@ -232,9 +275,24 @@ export const Uom = () => {
             <table className="w-full min-w-[700px] text-base bg-white dark:bg-gray-800">
               <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-sm">
                 <tr>
-                
-                  <th className="px-4 py-3 text-[12px] text-left">Unit Code</th>
-                  <th className="px-4 py-3 text-[12px] text-left">Unit Name</th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    onClick={() => handleSort('unit_code')}
+                  >
+                    <div className="flex items-center">
+                      Unit Code
+                      {getSortIcon('unit_code')}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    onClick={() => handleSort('unit_name')}
+                  >
+                    <div className="flex items-center">
+                      Unit Name
+                      {getSortIcon('unit_name')}
+                    </div>
+                  </th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
@@ -247,7 +305,6 @@ export const Uom = () => {
                     onMouseEnter={() => setHoveredRow(uom.id)}
                     onMouseLeave={() => setHoveredRow(null)}
                   >
-                   
                     <td className="px-4 py-3 text-[12px] text-left">{uom.unit_code}</td>
                     <td className="px-4 py-3 text-[12px] text-left">{uom.unit_name}</td>
                     <td className="flex justify-center gap-2 relative">

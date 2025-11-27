@@ -6,13 +6,24 @@ import Pagination from "../../utils/Pagination";
 import { toast, ToastContainer } from "react-toastify";
 import { FaCircleChevronDown, FaPlus } from "react-icons/fa6";
 import { IoIosMore } from "react-icons/io";
+import { FaSortUp, FaSortDown } from "react-icons/fa";
 import { deleteEquipmentGroup, fetchEquipmentGroups } from "../../apis/equipmentGroupApi";
 import EquipmentDrawer from "./EquipmentDrawer";
-// import { deleteEquipmentGroup } from "../../apis/equipmentGroupApi"; // Uncomment when ready
+
+type EquipmentGroup = {
+  id: string;
+  equipment_group: string;
+  equip_grp_code: string;
+};
+
+type SortConfig = {
+  key: keyof EquipmentGroup | null;
+  direction: 'asc' | 'desc';
+};
 
 export const EquipmentGroup = () => {
-    const [equipmentGroups, setEquipmentGroups] = useState<any[]>([]);
-    const [selectedGroup, setSelectedGroup] = useState<any | null>(null);
+    const [equipmentGroups, setEquipmentGroups] = useState<EquipmentGroup[]>([]);
+    const [selectedGroup, setSelectedGroup] = useState<EquipmentGroup | null>(null);
     const [loading, setLoading] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
     const [hoveredRow, setHoveredRow] = useState<string | null>(null);
@@ -21,21 +32,68 @@ export const EquipmentGroup = () => {
     const [rowsPerPage, setRowsPerPage] = useState(20);
     const [searchTerm, setSearchTerm] = useState("");
     const [drawerOpen, setDrawerOpen] = useState(false);
-    // const [selectedOem, setSelectedOem] = useState(null);
+    const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: 'asc' });
 
     const navigate = useNavigate();
+
+    // Apply sorting
+    const applySorting = (data: EquipmentGroup[], config: SortConfig) => {
+        if (!config.key) return data;
+
+        return [...data].sort((a, b) => {
+            let aValue = a[config.key!];
+            let bValue = b[config.key!];
+
+            // Handle null/undefined values
+            if (aValue == null) aValue = '';
+            if (bValue == null) bValue = '';
+
+            // Handle string values
+            if (typeof aValue === 'string' && typeof bValue === 'string') {
+                return config.direction === 'asc' 
+                    ? aValue.localeCompare(bValue)
+                    : bValue.localeCompare(aValue);
+            }
+
+            return 0;
+        });
+    };
+
+    const handleSort = (key: keyof EquipmentGroup) => {
+        setSortConfig(currentConfig => ({
+            key,
+            direction: currentConfig.key === key && currentConfig.direction === 'asc' ? 'desc' : 'asc'
+        }));
+    };
+
+    const getSortIcon = (key: keyof EquipmentGroup) => {
+        if (sortConfig.key !== key) {
+            return (
+                <div className="inline-flex flex-col ml-1 opacity-30">
+                    <FaSortUp size={10} className="-mb-1" />
+                    <FaSortDown size={10} className="-mt-1" />
+                </div>
+            );
+        }
+        
+        return sortConfig.direction === 'asc' 
+            ? <FaSortUp size={12} className="ml-1 text-blue-500" />
+            : <FaSortDown size={12} className="ml-1 text-blue-500" />;
+    };
 
     const filteredEquipmentGroups = equipmentGroups.filter((group) =>
         group.equipment_group?.toLowerCase()?.includes(searchTerm.toLowerCase()) ||
         group.equip_grp_code?.toLowerCase()?.includes(searchTerm.toLowerCase())
     );
 
+    const sortedEquipmentGroups = applySorting(filteredEquipmentGroups, sortConfig);
+
     const {
         currentPage,
         setCurrentPage,
         totalPages,
         paginatedData,
-    } = usePagination(filteredEquipmentGroups, rowsPerPage);
+    } = usePagination(sortedEquipmentGroups, rowsPerPage);
 
     const fetchAndSetEquipmentGroups = async () => {
         setLoading(true);
@@ -68,11 +126,10 @@ export const EquipmentGroup = () => {
         }
     }, [dropdownOpen]);
 
-    const handleDelete = async (group: any) => {
+    const handleDelete = async (group: EquipmentGroup) => {
         if (window.confirm("Are you sure you want to delete this equipment group?")) {
             setLoading(true);
             try {
-                // await deleteEquipmentGroup(group.id);
                 await deleteEquipmentGroup(group.id);
                 await fetchAndSetEquipmentGroups();
                 toast.success("Equipment group deleted successfully!");
@@ -84,17 +141,15 @@ export const EquipmentGroup = () => {
     };
 
     const handleSortByName = () => {
-        setEquipmentGroups((prev) =>
-            [...prev].sort((a, b) => a.equipment_group.localeCompare(b.equipment_group))
-        );
-        toast.info("Sorted by Name");
+        handleSort('equipment_group');
+        setMoreDropdownOpen(false);
+        setSortMenuOpen(false);
     };
 
     const handleSortByCode = () => {
-        setEquipmentGroups((prev) =>
-            [...prev].sort((a, b) => a.equip_grp_code.localeCompare(b.equip_grp_code))
-        );
-        toast.info("Sorted by Code");
+        handleSort('equip_grp_code');
+        setMoreDropdownOpen(false);
+        setSortMenuOpen(false);
     };
 
     return (
@@ -109,7 +164,7 @@ export const EquipmentGroup = () => {
                     <input
                         type="text"
                         placeholder="Search by name or code"
-                        className="px-4 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm"
+                        className="px-4 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm dark:bg-gray-800 dark:text-white dark:border-gray-600"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
@@ -123,7 +178,7 @@ export const EquipmentGroup = () => {
                     </button>
 
                     <span
-                        className="p-2 bg-gray-200 border-2 border-gray-50 rounded-lg cursor-pointer relative"
+                        className="p-2 bg-gray-200 border-2 border-gray-50 rounded-lg cursor-pointer relative dark:bg-gray-700 dark:border-gray-600"
                         onClick={(e) => {
                             e.stopPropagation();
                             setMoreDropdownOpen((prev) => !prev);
@@ -165,21 +220,13 @@ export const EquipmentGroup = () => {
                                         <div className="absolute right-full top-0 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-40 py-1">
                                             <button
                                                 className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
-                                                onClick={() => {
-                                                    setMoreDropdownOpen(false);
-                                                    setSortMenuOpen(false);
-                                                    handleSortByName();
-                                                }}
+                                                onClick={handleSortByName}
                                             >
                                                 Sort by Name
                                             </button>
                                             <button
                                                 className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
-                                                onClick={() => {
-                                                    setMoreDropdownOpen(false);
-                                                    setSortMenuOpen(false);
-                                                    handleSortByCode();
-                                                }}
+                                                onClick={handleSortByCode}
                                             >
                                                 Sort by Code
                                             </button>
@@ -204,10 +251,25 @@ export const EquipmentGroup = () => {
                     ) : (
                         <table className="w-full min-w-[700px] text-base bg-white dark:bg-gray-800">
                             <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-sm">
-                                <tr >
-                                   
-                                    <th className="px-4 py-3 text-[12px] text-left">Group Code</th>
-                                    <th className="px-4 py-3 text-[12px] text-left">Group Name</th>
+                                <tr>
+                                    <th 
+                                        className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                                        onClick={() => handleSort('equip_grp_code')}
+                                    >
+                                        <div className="flex items-center">
+                                            Group Code
+                                            {getSortIcon('equip_grp_code')}
+                                        </div>
+                                    </th>
+                                    <th 
+                                        className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                                        onClick={() => handleSort('equipment_group')}
+                                    >
+                                        <div className="flex items-center">
+                                            Group Name
+                                            {getSortIcon('equipment_group')}
+                                        </div>
+                                    </th>
                                     <th className="px-4 py-3"></th>
                                 </tr>
                             </thead>
@@ -216,7 +278,6 @@ export const EquipmentGroup = () => {
                                     <tr
                                         key={group.id}
                                         className="hover:bg-gray-50 dark:hover:bg-gray-700 transition cursor-pointer"
-
                                         onClick={() => {
                                             setSelectedGroup(group)
                                             setDrawerOpen(true);
@@ -224,7 +285,6 @@ export const EquipmentGroup = () => {
                                         onMouseEnter={() => setHoveredRow(group.id)}
                                         onMouseLeave={() => setHoveredRow(null)}
                                     >
-                                        
                                         <td className="px-4 py-3 text-[12px] text-left">
                                             {group.equip_grp_code}
                                         </td>

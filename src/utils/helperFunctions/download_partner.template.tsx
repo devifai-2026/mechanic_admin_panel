@@ -23,7 +23,7 @@ export default function DownloadPartnerTemplateButton() {
         "Karnataka",
         "Bengaluru",
         "560103",
-        "true",
+        "TRUE/FALSE",
       ],
     ];
 

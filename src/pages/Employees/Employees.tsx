@@ -6,6 +6,7 @@ import Pagination from "../../utils/Pagination";
 import { toast, ToastContainer } from "react-toastify";
 import { FaCircleChevronDown, FaPlus } from "react-icons/fa6";
 import { IoIosMore } from "react-icons/io";
+import { FaSortUp, FaSortDown } from "react-icons/fa";
 import EmployeeDrawer from "./EmployeeDrawer";
 import { handleExportEmployees } from "../../utils/helperFunctions/handleExportEmployees";
 import Title from "../../components/common/Title";
@@ -33,6 +34,10 @@ type EmployeeRow = {
   position?: string;
 };
 
+type SortConfig = {
+  key: keyof EmployeeRow | null;
+  direction: 'asc' | 'desc';
+};
 
 export const Employees = () => {
   const [employees, setEmployees] = useState<any[]>([]);
@@ -45,6 +50,7 @@ export const Employees = () => {
   const [moreDropdownOpen, setMoreDropdownOpen] = useState(false);
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [rowsPerPage, setRowsPerPage] = useState(20);
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: 'asc' });
   const navigate = useNavigate();
 
   const {
@@ -53,7 +59,6 @@ export const Employees = () => {
     totalPages,
     paginatedData: paginatedEmployees,
   } = usePagination(filteredEmployees, rowsPerPage);
-
 
   console.log({ employees })
 
@@ -69,7 +74,6 @@ export const Employees = () => {
         storeManager: "Store Manager",
         accountManager: "Account Manager",
         projectManager: "Project Manager",
-
         // Add other mappings if needed
       };
 
@@ -105,7 +109,6 @@ export const Employees = () => {
     }
   };
 
-
   useEffect(() => {
     fetchAndSetEmployees();
   }, []);
@@ -126,17 +129,83 @@ export const Employees = () => {
     }
   }, [dropdownOpen]);
 
+  // Apply sorting whenever sortConfig changes
+  useEffect(() => {
+    const sortedEmployees = applySorting(employees, sortConfig);
+    setFilteredEmployees(sortedEmployees);
+  }, [sortConfig, employees]);
+
+  const applySorting = (data: EmployeeRow[], config: SortConfig) => {
+    if (!config.key) return data;
+
+    return [...data].sort((a, b) => {
+      let aValue = a[config.key!];
+      let bValue = b[config.key!];
+
+      // Handle null/undefined values
+      if (aValue == null) aValue = '';
+      if (bValue == null) bValue = '';
+
+      // Handle numeric values (age)
+      if (config.key === 'age' && typeof aValue === 'number' && typeof bValue === 'number') {
+        return config.direction === 'asc' ? aValue - bValue : bValue - aValue;
+      }
+
+      // Handle boolean values (active)
+      if (config.key === 'active') {
+        const aBool = aValue === true || aValue === "Yes" || aValue === "true";
+        const bBool = bValue === true || bValue === "Yes" || bValue === "true";
+        return config.direction === 'asc' 
+          ? (aBool === bBool ? 0 : aBool ? -1 : 1)
+          : (aBool === bBool ? 0 : aBool ? 1 : -1);
+      }
+
+      // Handle string values
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return config.direction === 'asc' 
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+
+      return 0;
+    });
+  };
+
+  const handleSort = (key: keyof EmployeeRow) => {
+    setSortConfig(currentConfig => ({
+      key,
+      direction: currentConfig.key === key && currentConfig.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const getSortIcon = (key: keyof EmployeeRow) => {
+    if (sortConfig.key !== key) {
+      return (
+        <div className="inline-flex flex-col ml-1 opacity-30">
+          <FaSortUp size={10} className="-mb-1" />
+          <FaSortDown size={10} className="-mt-1" />
+        </div>
+      );
+    }
+    
+    return sortConfig.direction === 'asc' 
+      ? <FaSortUp size={12} className="ml-1 text-blue-500" />
+      : <FaSortDown size={12} className="ml-1 text-blue-500" />;
+  };
+
   // 👇 Search filtering effect
   useEffect(() => {
     if (searchTerm.trim() === "") {
-      setFilteredEmployees(employees);
+      const sortedEmployees = applySorting(employees, sortConfig);
+      setFilteredEmployees(sortedEmployees);
     } else {
       const filtered = employees.filter((e) =>
         e.emp_name.toLowerCase().includes(searchTerm.toLowerCase())
       );
-      setFilteredEmployees(filtered);
+      const sortedFiltered = applySorting(filtered, sortConfig);
+      setFilteredEmployees(sortedFiltered);
     }
-  }, [searchTerm, employees]);
+  }, [searchTerm, employees, sortConfig]);
 
   const handleDelete = async (employee: EmployeeRow) => {
     if (!window.confirm(`Are you sure you want to delete ${employee.emp_name}?`)) {
@@ -161,13 +230,15 @@ export const Employees = () => {
   };
 
   const handleSortByName = () => {
-    setEmployees((prev) => [...prev].sort((a, b) => a.emp_name.localeCompare(b.emp_name)));
-    toast.info("Sorted by Name");
+    handleSort('emp_name');
+    setMoreDropdownOpen(false);
+    setSortMenuOpen(false);
   };
 
   const handleSortByEmpId = () => {
-    setEmployees((prev) => [...prev].sort((a, b) => a.emp_id.localeCompare(b.emp_id)));
-    toast.info("Sorted by Emp ID");
+    handleSort('emp_id');
+    setMoreDropdownOpen(false);
+    setSortMenuOpen(false);
   };
 
   const handleExport = () => {
@@ -267,9 +338,6 @@ export const Employees = () => {
           </div>
         </div>
 
-
-
-
         <div className="overflow-x-auto flex-1 w-full overflow-auto pb-6">
           {loading ? (
             <div className="flex justify-center items-center py-10">
@@ -279,16 +347,79 @@ export const Employees = () => {
             <table className="w-full min-w-[1100px] text-base bg-white dark:bg-gray-800">
               <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-sm">
                 <tr>
-                 
-                  <th className="px-4 py-3 text-[12px] text-left">Emp ID</th>
-                  <th className="px-4 py-3 text-[12px] text-left">Name</th>
-                  <th className="px-4 py-3 text-[12px] text-left">Age</th>
-                  <th className="px-4 py-3 text-[12px] text-left">Blood Group</th>
-                  <th className="px-4 py-3 text-[12px] text-left">Shift</th>
-                  <th className="px-4 py-3 text-[12px] text-left">Role</th>
-                  <th className="px-4 py-3 text-[12px] text-left">App Role</th>
-                  <th className="px-4 py-3 text-[12px] text-left">Active</th>
-                  <th className="px-4 py-3 text-[12px] text-left"></th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    onClick={() => handleSort('emp_id')}
+                  >
+                    <div className="flex items-center">
+                      Emp ID
+                      {getSortIcon('emp_id')}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    onClick={() => handleSort('emp_name')}
+                  >
+                    <div className="flex items-center">
+                      Name
+                      {getSortIcon('emp_name')}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    onClick={() => handleSort('age')}
+                  >
+                    <div className="flex items-center">
+                      Age
+                      {getSortIcon('age')}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    onClick={() => handleSort('bloodGroup')}
+                  >
+                    <div className="flex items-center">
+                      Blood Group
+                      {getSortIcon('bloodGroup')}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    onClick={() => handleSort('shift')}
+                  >
+                    <div className="flex items-center">
+                      Shift
+                      {getSortIcon('shift')}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    onClick={() => handleSort('role')}
+                  >
+                    <div className="flex items-center">
+                      Role
+                      {getSortIcon('role')}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    onClick={() => handleSort('app_access_role')}
+                  >
+                    <div className="flex items-center">
+                      App Role
+                      {getSortIcon('app_access_role')}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    onClick={() => handleSort('active')}
+                  >
+                    <div className="flex items-center">
+                      Active
+                      {getSortIcon('active')}
+                    </div>
+                  </th>
+                  <th className="px-4 py-3 text-[12px] text-left">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-600 text-gray-800 dark:text-gray-100 text-center">
@@ -301,7 +432,6 @@ export const Employees = () => {
                       onMouseEnter={() => setHoveredRow(employee.id)}
                       onMouseLeave={() => setHoveredRow(null)}
                     >
-                     
                       <td className="px-4 py-2 text-[12px] text-left ">
                         {employee.emp_id ? employee.emp_id.toUpperCase().replace(/[^A-Z0-9]/g, '') : ''}
                       </td>

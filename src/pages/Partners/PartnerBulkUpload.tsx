@@ -1,11 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { FaUpload, FaFileExcel, FaTimes, FaSpinner } from "react-icons/fa";
 import axiosInstance from "../../utils/axiosInstance";
 import DownloadPartnerTemplateButton from "../../utils/helperFunctions/download_partner.template";
+import { useNavigate } from "react-router";
 
 const PartnerBulkUpload: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null); // Added useRef
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -22,6 +25,15 @@ const PartnerBulkUpload: React.FC = () => {
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       setFile(e.dataTransfer.files[0]);
       e.dataTransfer.clearData();
+    }
+  };
+
+  // New function to handle file removal
+  const handleRemoveFile = () => {
+    setFile(null);
+    // Reset the file input to allow selecting the same file again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
   };
 
@@ -52,13 +64,14 @@ const PartnerBulkUpload: React.FC = () => {
             item.status
           }\n   Message: ${item.message || "No additional info"}\n\n`;
         });
-
+        navigate("/partners/view");
         alert(message);
       } else {
+        navigate("/partners/view");
         alert("Bulk upload completed successfully!");
       }
 
-      setFile(null);
+      handleRemoveFile(); // Use the new function here
     } catch (error) {
       console.error("Upload failed:", error);
       alert("Upload failed. Please try again.");
@@ -82,6 +95,7 @@ const PartnerBulkUpload: React.FC = () => {
         <label className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md">
           <span>Browse files</span>
           <input
+            ref={fileInputRef} // Added ref here
             type="file"
             className="hidden"
             onChange={handleFileChange}
@@ -110,7 +124,7 @@ const PartnerBulkUpload: React.FC = () => {
               </div>
             </div>
             <button
-              onClick={() => setFile(null)}
+              onClick={handleRemoveFile} // Updated to use handleRemoveFile
               className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
             >
               <FaTimes />

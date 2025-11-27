@@ -6,9 +6,15 @@ import Pagination from "../../utils/Pagination";
 import { toast, ToastContainer } from "react-toastify";
 import { FaCircleChevronDown, FaPlus } from "react-icons/fa6";
 import { IoIosMore } from "react-icons/io";
+import { FaSortUp, FaSortDown } from "react-icons/fa";
 import OemDrawer from "./OemDrawer";
 import { getAllOEMs, deleteOEM } from "../../apis/oemApi";
 import { OEM } from "../../types/oemTypes";
+
+type SortConfig = {
+  key: keyof OEM | null;
+  direction: 'asc' | 'desc';
+};
 
 export const OemPage = () => {
   const [oems, setOems] = useState<OEM[]>([]);
@@ -21,7 +27,53 @@ export const OemPage = () => {
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: 'asc' });
   const navigate = useNavigate();
+
+  // Apply sorting
+  const applySorting = (data: OEM[], config: SortConfig) => {
+    if (!config.key) return data;
+
+    return [...data].sort((a, b) => {
+      let aValue = a[config.key!];
+      let bValue = b[config.key!];
+
+      // Handle null/undefined values
+      if (aValue == null) aValue = '';
+      if (bValue == null) bValue = '';
+
+      // Handle string values
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return config.direction === 'asc' 
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+
+      return 0;
+    });
+  };
+
+  const handleSort = (key: keyof OEM) => {
+    setSortConfig(currentConfig => ({
+      key,
+      direction: currentConfig.key === key && currentConfig.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const getSortIcon = (key: keyof OEM) => {
+    if (sortConfig.key !== key) {
+      return (
+        <div className="inline-flex flex-col ml-1 opacity-30">
+          <FaSortUp size={10} className="-mb-1" />
+          <FaSortDown size={10} className="-mt-1" />
+        </div>
+      );
+    }
+    
+    return sortConfig.direction === 'asc' 
+      ? <FaSortUp size={12} className="ml-1 text-blue-500" />
+      : <FaSortDown size={12} className="ml-1 text-blue-500" />;
+  };
 
   const {
     currentPage,
@@ -35,7 +87,8 @@ export const OemPage = () => {
     try {
       const data = await getAllOEMs();
       setOems(data);
-      setFilteredOems(data); // apply to filtered as well
+      const sortedData = applySorting(data, sortConfig);
+      setFilteredOems(sortedData);
     } catch (err) {
       toast.error("Failed to fetch OEMs");
     } finally {
@@ -49,7 +102,8 @@ export const OemPage = () => {
 
   useEffect(() => {
     if (searchTerm.trim() === "") {
-      setFilteredOems(oems);
+      const sortedData = applySorting(oems, sortConfig);
+      setFilteredOems(sortedData);
     } else {
       const lower = searchTerm.toLowerCase();
       const filtered = oems.filter(
@@ -57,9 +111,10 @@ export const OemPage = () => {
           item.oem_name.toLowerCase().includes(lower) ||
           item.oem_code.toLowerCase().includes(lower)
       );
-      setFilteredOems(filtered);
+      const sortedFiltered = applySorting(filtered, sortConfig);
+      setFilteredOems(sortedFiltered);
     }
-  }, [searchTerm, oems]);
+  }, [searchTerm, oems, sortConfig]);
 
   const handleDelete = async (oem: OEM) => {
     if (window.confirm("Are you sure you want to delete this OEM?")) {
@@ -77,19 +132,15 @@ export const OemPage = () => {
   };
 
   const handleSortByName = () => {
-    const sorted = [...filteredOems].sort((a, b) =>
-      a.oem_name.localeCompare(b.oem_name)
-    );
-    setFilteredOems(sorted);
-    toast.info("Sorted by Name");
+    handleSort('oem_name');
+    setMoreDropdownOpen(false);
+    setSortMenuOpen(false);
   };
 
   const handleSortByCode = () => {
-    const sorted = [...filteredOems].sort((a, b) =>
-      a.oem_code.localeCompare(b.oem_code)
-    );
-    setFilteredOems(sorted);
-    toast.info("Sorted by Code");
+    handleSort('oem_code');
+    setMoreDropdownOpen(false);
+    setSortMenuOpen(false);
   };
 
   return (
@@ -101,7 +152,7 @@ export const OemPage = () => {
           <input
             type="text"
             placeholder="Search by name or code"
-            className="px-4 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm"
+            className="px-4 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm dark:bg-gray-800 dark:text-white dark:border-gray-600"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -113,7 +164,7 @@ export const OemPage = () => {
             <span>New</span>
           </button>
           <span
-            className="p-2 bg-gray-200 border-2 border-gray-50 rounded-lg cursor-pointer relative"
+            className="p-2 bg-gray-200 border-2 border-gray-50 rounded-lg cursor-pointer relative dark:bg-gray-700 dark:border-gray-600"
             onClick={(e) => {
               e.stopPropagation();
               setMoreDropdownOpen((prev) => !prev);
@@ -123,7 +174,7 @@ export const OemPage = () => {
             {moreDropdownOpen && (
               <div className="absolute right-0 mt-2 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-30 py-1">
                 <button
-                  className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 transition"
+                  className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
                   onClick={() => {
                     setMoreDropdownOpen(false);
                     toast.info("Export clicked");
@@ -132,7 +183,7 @@ export const OemPage = () => {
                   Export
                 </button>
                 <button
-                  className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 transition"
+                  className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
                   onClick={() => {
                     setMoreDropdownOpen(false);
                     fetchAndSetOems();
@@ -146,7 +197,7 @@ export const OemPage = () => {
                   onMouseLeave={() => setSortMenuOpen(false)}
                 >
                   <button
-                    className="w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white flex justify-between items-center transition"
+                    className="w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 flex justify-between items-center transition"
                     onClick={() => setSortMenuOpen((prev) => !prev)}
                   >
                     Sort
@@ -155,22 +206,14 @@ export const OemPage = () => {
                   {sortMenuOpen && (
                     <div className="absolute right-full top-0 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-40 py-1">
                       <button
-                        className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white transition"
-                        onClick={() => {
-                          setMoreDropdownOpen(false);
-                          setSortMenuOpen(false);
-                          handleSortByName();
-                        }}
+                        className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
+                        onClick={handleSortByName}
                       >
                         Sort by Name
                       </button>
                       <button
-                        className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white transition"
-                        onClick={() => {
-                          setMoreDropdownOpen(false);
-                          setSortMenuOpen(false);
-                          handleSortByCode();
-                        }}
+                        className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
+                        onClick={handleSortByCode}
                       >
                         Sort by Code
                       </button>
@@ -195,9 +238,24 @@ export const OemPage = () => {
             <table className="w-full min-w-[700px] text-base bg-white dark:bg-gray-800">
               <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-sm">
                 <tr>
-                 
-                  <th className="px-4 py-3 text-left text-[12px]">OEM Name</th>
-                  <th className="px-4 py-3 text-left text-[12px]">OEM Code</th>
+                  <th 
+                    className="px-4 py-3 text-left text-[12px] cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    onClick={() => handleSort('oem_name')}
+                  >
+                    <div className="flex items-center">
+                      OEM Name
+                      {getSortIcon('oem_name')}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-left text-[12px] cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    onClick={() => handleSort('oem_code')}
+                  >
+                    <div className="flex items-center">
+                      OEM Code
+                      {getSortIcon('oem_code')}
+                    </div>
+                  </th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
@@ -210,7 +268,6 @@ export const OemPage = () => {
                     onMouseEnter={() => setHoveredRow(oem.id)}
                     onMouseLeave={() => setHoveredRow(null)}
                   >
-                    
                     <td className="px-4 py-3 text-left text-[12px]">
                       {oem.oem_name}
                     </td>
@@ -241,7 +298,7 @@ export const OemPage = () => {
                           onClick={(e) => e.stopPropagation()}
                         >
                           <button
-                            className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white transition"
+                            className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
                             onClick={() => {
                               setDropdownOpen(null);
                               navigate(`/oem/edit/${oem.id}`);
@@ -250,7 +307,7 @@ export const OemPage = () => {
                             Edit
                           </button>
                           <button
-                            className="block w-full text-left px-4 py-2 text-sm hover:bg-red-500 hover:text-white transition"
+                            className="block w-full text-left px-4 py-2 text-sm hover:bg-red-500 hover:text-white dark:hover:bg-gray-700 transition"
                             onClick={() => {
                               setDropdownOpen(null);
                               handleDelete(oem);

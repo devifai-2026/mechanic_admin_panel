@@ -6,6 +6,7 @@ import Pagination from "../../utils/Pagination";
 import { toast, ToastContainer } from "react-toastify";
 import { FaCircleChevronDown, FaPlus } from "react-icons/fa6";
 import { IoIosMore } from "react-icons/io";
+import { FaSortUp, FaSortDown } from "react-icons/fa";
 import StoreDrawer from "./StoreDrawer";
 import Title from "../../components/common/Title";
 
@@ -14,6 +15,11 @@ type StoreRow = {
   store_code: string;
   store_name?: string;
   store_location: string;
+};
+
+type SortConfig = {
+  key: keyof StoreRow | null;
+  direction: 'asc' | 'desc';
 };
 
 export const StoreLocation = () => {
@@ -26,6 +32,7 @@ export const StoreLocation = () => {
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: 'asc' });
 
   const navigate = useNavigate();
 
@@ -51,18 +58,66 @@ export const StoreLocation = () => {
     fetchAndSetStores();
   }, []);
 
+  // Apply sorting
+  const applySorting = (data: StoreRow[], config: SortConfig) => {
+    if (!config.key) return data;
+
+    return [...data].sort((a, b) => {
+      let aValue = a[config.key!];
+      let bValue = b[config.key!];
+
+      // Handle null/undefined values
+      if (aValue == null) aValue = '';
+      if (bValue == null) bValue = '';
+
+      // Handle string values
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return config.direction === 'asc' 
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+
+      return 0;
+    });
+  };
+
+  const handleSort = (key: keyof StoreRow) => {
+    setSortConfig(currentConfig => ({
+      key,
+      direction: currentConfig.key === key && currentConfig.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const getSortIcon = (key: keyof StoreRow) => {
+    if (sortConfig.key !== key) {
+      return (
+        <div className="inline-flex flex-col ml-1 opacity-30">
+          <FaSortUp size={10} className="-mb-1" />
+          <FaSortDown size={10} className="-mt-1" />
+        </div>
+      );
+    }
+    
+    return sortConfig.direction === 'asc' 
+      ? <FaSortUp size={12} className="ml-1 text-blue-500" />
+      : <FaSortDown size={12} className="ml-1 text-blue-500" />;
+  };
+
+  // Filtered and sorted data
   const filteredStores = stores.filter(
     (store) =>
       store.store_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (store.store_name || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const sortedStores = applySorting(filteredStores, sortConfig);
+
   const {
     currentPage,
     setCurrentPage,
     totalPages,
     paginatedData: paginatedStores,
-  } = usePagination(filteredStores, rowsPerPage);
+  } = usePagination(sortedStores, rowsPerPage);
 
   const exportToCSV = (data: StoreRow[], filename: string = "stores.csv") => {
     const headers = ["Store Code", "Name", "Location"];
@@ -117,19 +172,21 @@ export const StoreLocation = () => {
   };
 
   const handleSortByName = () => {
-    setStores((prev) =>
-      [...prev].sort((a, b) =>
-        (a.store_name || "").localeCompare(b.store_name || "")
-      )
-    );
-    toast.info("Sorted by Name");
+    handleSort('store_name');
+    setMoreDropdownOpen(false);
+    setSortMenuOpen(false);
   };
 
   const handleSortByCode = () => {
-    setStores((prev) =>
-      [...prev].sort((a, b) => a.store_code.localeCompare(b.store_code))
-    );
-    toast.info("Sorted by Store Code");
+    handleSort('store_code');
+    setMoreDropdownOpen(false);
+    setSortMenuOpen(false);
+  };
+
+  const handleSortByLocation = () => {
+    handleSort('store_location');
+    setMoreDropdownOpen(false);
+    setSortMenuOpen(false);
   };
 
   return (
@@ -147,7 +204,7 @@ export const StoreLocation = () => {
                 placeholder="Search by code or name"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="px-3 py-1 border rounded-md text-sm w-60"
+                className="px-3 py-1 border rounded-md text-sm w-60 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white dark:border-gray-600"
               />
               <button
                 onClick={() => navigate("/store-locations/create")}
@@ -157,7 +214,7 @@ export const StoreLocation = () => {
                 <span>New</span>
               </button>
               <span
-                className="p-2 bg-gray-200 border-2 border-gray-50 rounded-lg cursor-pointer relative"
+                className="p-2 bg-gray-200 border-2 border-gray-50 rounded-lg cursor-pointer relative dark:bg-gray-700 dark:border-gray-600"
                 onClick={(e) => {
                   e.stopPropagation();
                   setMoreDropdownOpen((prev) => !prev);
@@ -200,23 +257,21 @@ export const StoreLocation = () => {
                         <div className="absolute right-full top-0 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-40 py-1">
                           <button
                             className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
-                            onClick={() => {
-                              setMoreDropdownOpen(false);
-                              setSortMenuOpen(false);
-                              handleSortByName();
-                            }}
+                            onClick={handleSortByName}
                           >
                             Sort by Name
                           </button>
                           <button
                             className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
-                            onClick={() => {
-                              setMoreDropdownOpen(false);
-                              setSortMenuOpen(false);
-                              handleSortByCode();
-                            }}
+                            onClick={handleSortByCode}
                           >
                             Sort by Store Code
+                          </button>
+                          <button
+                            className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                            onClick={handleSortByLocation}
+                          >
+                            Sort by Location
                           </button>
                         </div>
                       )}
@@ -228,7 +283,7 @@ export const StoreLocation = () => {
           </div>
         </div>
 
-        <div className="overflow-x-auto flex-1 w-full overflow-auto  pb-6">
+        <div className="overflow-x-auto flex-1 w-full overflow-auto pb-6">
           {loading ? (
             <div className="flex justify-center items-center py-10">
               <span className="text-blue-600 font-semibold text-lg">
@@ -239,10 +294,33 @@ export const StoreLocation = () => {
             <table className="w-full min-w-[900px] text-base bg-white dark:bg-gray-800">
               <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-sm">
                 <tr>
-                 
-                  <th className="px-4 py-3 text-[12px] text-left">Store Code</th>
-                  <th className="px-4 py-3 text-[12px] text-left">Name</th>
-                  <th className="px-4 py-3 text-[12px] text-left">Location</th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    onClick={() => handleSort('store_code')}
+                  >
+                    <div className="flex items-center">
+                      Store Code
+                      {getSortIcon('store_code')}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    onClick={() => handleSort('store_name')}
+                  >
+                    <div className="flex items-center">
+                      Name
+                      {getSortIcon('store_name')}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    onClick={() => handleSort('store_location')}
+                  >
+                    <div className="flex items-center">
+                      Location
+                      {getSortIcon('store_location')}
+                    </div>
+                  </th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
@@ -256,7 +334,6 @@ export const StoreLocation = () => {
                       onMouseEnter={() => setHoveredRow(store.id)}
                       onMouseLeave={() => setHoveredRow(null)}
                     >
-                    
                       <td className="px-4 py-3 text-[12px] text-left">{store.store_code}</td>
                       <td className="px-4 py-3 text-[12px] text-left">{store.store_name || "-"}</td>
                       <td className="px-4 py-3 text-[12px] text-left">{store.store_location}</td>

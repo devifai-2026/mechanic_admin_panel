@@ -18,10 +18,19 @@ const EquipmentDrawer: React.FC<{
 }> = ({ isOpen, onClose, equipment }) => {
   if (!isOpen || !equipment) return null;
 
-  // Helper function to check if a log is a valid PDF URL
-  const isValidPdf = (log: string) => {
-    if (!log || typeof log !== 'string') return false;
-    return log.trim().toLowerCase().endsWith('.pdf');
+  // Helper function to clean URLs by removing extra quotation marks
+  const cleanUrl = (url: string) => {
+    if (!url || typeof url !== 'string') return null;
+    
+    // Remove extra quotation marks and trim
+    const cleaned = url.replace(/^"+|"+$/g, '').trim();
+    
+    // Check if it's a valid PDF URL
+    if (cleaned && (cleaned.toLowerCase().endsWith('.pdf') || cleaned.includes('/image/upload/'))) {
+      return cleaned;
+    }
+    
+    return null;
   };
 
   // Format display data
@@ -35,9 +44,9 @@ const EquipmentDrawer: React.FC<{
     purchaseCost: equipment.purchase_cost ?? equipment.purchaseCost ?? "",
     equipmentGroups: equipment.equipmentGroup || [],
     projects: equipment.projects || [],
-    manual: equipment.equipment_manual || "",
-    maintenanceLog: equipment.maintenance_log || "",
-    otherLog: equipment.other_log || "",
+    manual: cleanUrl(equipment.equipment_manual),
+    maintenanceLog: cleanUrl(equipment.maintenance_log),
+    otherLog: cleanUrl(equipment.other_log),
     hsn_number: equipment.hsn_number || "",
   };
 
@@ -188,12 +197,12 @@ const EquipmentDrawer: React.FC<{
                   </h3>
                 </div>
                 <div className="pl-6">
-                  {isValidPdf(displayEquipment.manual) ? (
+                  {displayEquipment.manual ? (
                     <a
                       href={displayEquipment.manual}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline"
+                      className="text-blue-600 hover:underline flex items-center"
                     >
                       📄 View PDF
                     </a>
@@ -212,12 +221,12 @@ const EquipmentDrawer: React.FC<{
                   </h3>
                 </div>
                 <div className="pl-6">
-                  {isValidPdf(displayEquipment.maintenanceLog) ? (
+                  {displayEquipment.maintenanceLog ? (
                     <a
                       href={displayEquipment.maintenanceLog}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline"
+                      className="text-blue-600 hover:underline flex items-center"
                     >
                       📄 View PDF
                     </a>
@@ -234,12 +243,12 @@ const EquipmentDrawer: React.FC<{
                   <h3 className="font-semibold text-gray-700 dark:text-white">Other Log</h3>
                 </div>
                 <div className="pl-6">
-                  {isValidPdf(displayEquipment.otherLog) ? (
+                  {displayEquipment.otherLog ? (
                     <a
                       href={displayEquipment.otherLog}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline"
+                      className="text-blue-600 hover:underline flex items-center"
                     >
                       📄 View PDF
                     </a>

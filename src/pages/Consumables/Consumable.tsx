@@ -5,11 +5,17 @@ import Pagination from "../../utils/Pagination";
 import { toast, ToastContainer } from "react-toastify";
 import { FaCircleChevronDown, FaPlus } from "react-icons/fa6";
 import { IoIosMore } from "react-icons/io";
+import { FaSortUp, FaSortDown } from "react-icons/fa";
 import ConsumableDrawer from "./ConsumableDrawer";
 import { Item } from "../../types/consumableItemTypes";
 import { deleteItem, fetchItems } from "../../apis/consumableApi";
 import * as XLSX from "xlsx";
 import Title from "../../components/common/Title";
+
+type SortConfig = {
+  key: keyof Item | null;
+  direction: 'asc' | 'desc';
+};
 
 export const Consumable = () => {
   const [items, setItems] = useState<Item[]>([]);
@@ -22,6 +28,7 @@ export const Consumable = () => {
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: 'asc' });
   const navigate = useNavigate();
 
   const exportToExcel = () => {
@@ -43,6 +50,58 @@ export const Consumable = () => {
     XLSX.writeFile(workbook, "ConsumableItems.xlsx");
   };
 
+  // Apply sorting
+  const applySorting = (data: Item[], config: SortConfig) => {
+    if (!config.key) return data;
+
+    return [...data].sort((a, b) => {
+      let aValue = a[config.key!];
+      let bValue = b[config.key!];
+
+      // Handle null/undefined values
+      if (aValue == null) aValue = '';
+      if (bValue == null) bValue = '';
+
+      // Handle numeric values (item_qty_in_hand)
+      if (config.key === 'item_qty_in_hand') {
+        const aNum = Number(aValue) || 0;
+        const bNum = Number(bValue) || 0;
+        return config.direction === 'asc' ? aNum - bNum : bNum - aNum;
+      }
+
+      // Handle string values
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return config.direction === 'asc' 
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+
+      return 0;
+    });
+  };
+
+  const handleSort = (key: keyof Item) => {
+    setSortConfig(currentConfig => ({
+      key,
+      direction: currentConfig.key === key && currentConfig.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const getSortIcon = (key: keyof Item) => {
+    if (sortConfig.key !== key) {
+      return (
+        <div className="inline-flex flex-col ml-1 opacity-30">
+          <FaSortUp size={10} className="-mb-1" />
+          <FaSortDown size={10} className="-mt-1" />
+        </div>
+      );
+    }
+    
+    return sortConfig.direction === 'asc' 
+      ? <FaSortUp size={12} className="ml-1 text-blue-500" />
+      : <FaSortDown size={12} className="ml-1 text-blue-500" />;
+  };
+
   useEffect(() => {
     const lower = searchTerm.toLowerCase();
     const results = items.filter(
@@ -50,8 +109,9 @@ export const Consumable = () => {
         item.item_code.toLowerCase().includes(lower) ||
         item.item_name.toLowerCase().includes(lower)
     );
-    setFilteredItems(results);
-  }, [searchTerm, items]);
+    const sortedResults = applySorting(results, sortConfig);
+    setFilteredItems(sortedResults);
+  }, [searchTerm, items, sortConfig]);
 
   const {
     currentPage,
@@ -65,7 +125,8 @@ export const Consumable = () => {
     try {
       const data = await fetchItems();
       setItems(data);
-      setFilteredItems(data);
+      const sortedData = applySorting(data, sortConfig);
+      setFilteredItems(sortedData);
     } catch (err) {
       toast.error("Failed to fetch items");
     }
@@ -107,17 +168,27 @@ export const Consumable = () => {
   };
 
   const handleSortByName = () => {
-    setItems((prev) =>
-      [...prev].sort((a, b) => a.item_name.localeCompare(b.item_name))
-    );
-    toast.info("Sorted by Name");
+    handleSort('item_name');
+    setMoreDropdownOpen(false);
+    setSortMenuOpen(false);
   };
 
   const handleSortByCode = () => {
-    setItems((prev) =>
-      [...prev].sort((a, b) => a.item_code.localeCompare(b.item_code))
-    );
-    toast.info("Sorted by Code");
+    handleSort('item_code');
+    setMoreDropdownOpen(false);
+    setSortMenuOpen(false);
+  };
+
+  const handleSortByProductType = () => {
+    handleSort('product_type');
+    setMoreDropdownOpen(false);
+    setSortMenuOpen(false);
+  };
+
+  const handleSortByQuantity = () => {
+    handleSort('item_qty_in_hand');
+    setMoreDropdownOpen(false);
+    setSortMenuOpen(false);
   };
 
   return (
@@ -132,7 +203,7 @@ export const Consumable = () => {
               placeholder="Search by code or name"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring focus:border-blue-300"
+              className="px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring focus:border-blue-300 dark:bg-gray-800 dark:text-white dark:border-gray-600"
             />
             <button
               onClick={() => navigate("/consumable/create")}
@@ -142,7 +213,7 @@ export const Consumable = () => {
               <span>New</span>
             </button>
             <span
-              className="p-2 bg-gray-200 border-2 border-gray-50 rounded-lg cursor-pointer relative"
+              className="p-2 bg-gray-200 border-2 border-gray-50 rounded-lg cursor-pointer relative dark:bg-gray-700 dark:border-gray-600"
               onClick={(e) => {
                 e.stopPropagation();
                 setMoreDropdownOpen((prev) => !prev);
@@ -185,23 +256,27 @@ export const Consumable = () => {
                       <div className="absolute right-full top-0 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-40 py-1">
                         <button
                           className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
-                          onClick={() => {
-                            setMoreDropdownOpen(false);
-                            setSortMenuOpen(false);
-                            handleSortByName();
-                          }}
+                          onClick={handleSortByName}
                         >
                           Sort by Name
                         </button>
                         <button
                           className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
-                          onClick={() => {
-                            setMoreDropdownOpen(false);
-                            setSortMenuOpen(false);
-                            handleSortByCode();
-                          }}
+                          onClick={handleSortByCode}
                         >
                           Sort by Code
+                        </button>
+                        <button
+                          className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
+                          onClick={handleSortByProductType}
+                        >
+                          Sort by Product Type
+                        </button>
+                        <button
+                          className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
+                          onClick={handleSortByQuantity}
+                        >
+                          Sort by Quantity
                         </button>
                       </div>
                     )}
@@ -223,13 +298,42 @@ export const Consumable = () => {
             <table className="w-full min-w-[700px] text-base bg-white dark:bg-gray-800">
               <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-sm">
                 <tr>
-                 
-                  <th className="px-4 py-3 text-[12px] text-left">Code</th>
-                  <th className="px-4 py-3 text-[12px] text-left">Item Name</th>
-                  <th className="px-4 py-3 text-[12px] text-left">
-                    Product Type
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    onClick={() => handleSort('item_code')}
+                  >
+                    <div className="flex items-center">
+                      Code
+                      {getSortIcon('item_code')}
+                    </div>
                   </th>
-                  <th className="px-4 py-3 text-[12px] text-left">Quantity</th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    onClick={() => handleSort('item_name')}
+                  >
+                    <div className="flex items-center">
+                      Item Name
+                      {getSortIcon('item_name')}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    onClick={() => handleSort('product_type')}
+                  >
+                    <div className="flex items-center">
+                      Product Type
+                      {getSortIcon('product_type')}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    onClick={() => handleSort('item_qty_in_hand')}
+                  >
+                    <div className="flex items-center">
+                      Quantity
+                      {getSortIcon('item_qty_in_hand')}
+                    </div>
+                  </th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
@@ -242,7 +346,6 @@ export const Consumable = () => {
                     onMouseEnter={() => setHoveredRow(item.id)}
                     onMouseLeave={() => setHoveredRow(null)}
                   >
-                   
                     <td className="px-4 py-3 text-[12px] text-left">
                       {item.item_code}
                     </td>

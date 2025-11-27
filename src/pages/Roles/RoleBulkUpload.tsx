@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { FaUpload, FaFileExcel, FaTimes, FaSpinner } from "react-icons/fa";
 import axiosInstance from "../../utils/axiosInstance";
 import DownloadTemplateButtonForRole from "../../utils/helperFunctions/roles_excel";
@@ -6,6 +6,7 @@ import DownloadTemplateButtonForRole from "../../utils/helperFunctions/roles_exc
 const RoleBulkUpload: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null); // Added useRef
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -25,45 +26,54 @@ const RoleBulkUpload: React.FC = () => {
     }
   };
 
-const handleUpload = async () => {
-  if (!file) return;
+  // New function to handle file removal
+  const handleRemoveFile = () => {
+    setFile(null);
+    // Reset the file input to allow selecting the same file again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
-  setIsUploading(true);
+  const handleUpload = async () => {
+    if (!file) return;
 
-  try {
-    const formData = new FormData();
-    formData.append("file", file);
+    setIsUploading(true);
 
-    const response = await axiosInstance.post("/role/bulk-upload", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
 
-    const { status, data } = response;
-
-    if (status === 201 && data?.results && Array.isArray(data.results)) {
-      let message = `${data.message || "Bulk Upload Completed"}:\n\n`;
-
-      data.results.forEach((item: any, index: number) => {
-        message += `${index + 1}. Role: ${item.code || "N/A"}\n   Status: ${
-          item.status
-        }\n   Message: ${item.message || "No message"}\n\n`;
+      const response = await axiosInstance.post("/role/bulk-upload", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
       });
 
-      alert(message);
-    } else {
-      alert(data.message || "Bulk upload completed successfully.");
-    }
+      const { status, data } = response;
 
-    setFile(null);
-  } catch (error) {
-    console.error("Upload failed:", error);
-    alert("Upload failed. Please try again.");
-  } finally {
-    setIsUploading(false);
-  }
-};
+      if (status === 201 && data?.results && Array.isArray(data.results)) {
+        let message = `${data.message || "Bulk Upload Completed"}:\n\n`;
+
+        data.results.forEach((item: any, index: number) => {
+          message += `${index + 1}. Role: ${item.code || "N/A"}\n   Status: ${
+            item.status
+          }\n   Message: ${item.message || "No message"}\n\n`;
+        });
+
+        alert(message);
+      } else {
+        alert(data.message || "Bulk upload completed successfully.");
+      }
+
+      handleRemoveFile(); // Use the new function here
+    } catch (error) {
+      console.error("Upload failed:", error);
+      alert("Upload failed. Please try again.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   return (
     <div
@@ -80,6 +90,7 @@ const handleUpload = async () => {
         <label className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md">
           <span>Browse files</span>
           <input
+            ref={fileInputRef} // Added ref here
             type="file"
             className="hidden"
             onChange={handleFileChange}
@@ -107,7 +118,7 @@ const handleUpload = async () => {
               </div>
             </div>
             <button
-              onClick={() => setFile(null)}
+              onClick={handleRemoveFile} // Updated to use handleRemoveFile
               className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
             >
               <FaTimes />
