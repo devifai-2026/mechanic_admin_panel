@@ -20,20 +20,49 @@ export const ItemGroupPage = () => {
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortField, setSortField] = useState<string>("");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const navigate = useNavigate();
 
+  // Sort item groups function
+  const sortItemGroups = (itemGroups: ItemGroup[]) => {
+    if (!sortField) return itemGroups;
+
+    return [...itemGroups].sort((a, b) => {
+      let aValue = a[sortField as keyof ItemGroup];
+      let bValue = b[sortField as keyof ItemGroup];
+
+      // Handle string fields with case-insensitive sorting
+      if (typeof aValue === "string" && typeof bValue === "string") {
+        aValue = aValue.toLowerCase();
+        bValue = bValue.toLowerCase();
+      }
+
+      if (aValue < bValue) {
+        return sortDirection === "asc" ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortDirection === "asc" ? 1 : -1;
+      }
+      return 0;
+    });
+  };
+
+  // Filtered and sorted data
   const filteredItemGroups = itemGroups.filter(
     (group) =>
       group.group_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       group.group_code.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const sortedItemGroups = sortItemGroups(filteredItemGroups);
+
   const {
     currentPage,
     setCurrentPage,
     totalPages,
     paginatedData: paginatedItemGroups,
-  } = usePagination(filteredItemGroups, rowsPerPage);
+  } = usePagination(sortedItemGroups, rowsPerPage);
 
   const handleExport = () => {
     if (!filteredItemGroups.length) {
@@ -91,6 +120,44 @@ export const ItemGroupPage = () => {
     }
   }, [dropdownOpen]);
 
+  useEffect(() => {
+    const handleClickOutside = () => setSortMenuOpen(false);
+    if (sortMenuOpen) {
+      document.addEventListener("click", handleClickOutside);
+      return () => document.removeEventListener("click", handleClickOutside);
+    }
+  }, [sortMenuOpen]);
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      // Toggle direction if same field
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // Set new field with ascending direction
+      setSortField(field);
+      setSortDirection("asc");
+    }
+    setSortMenuOpen(false);
+    setMoreDropdownOpen(false);
+    
+    const fieldName = getFieldDisplayName(field);
+    const direction = sortField === field ? (sortDirection === "asc" ? "descending" : "ascending") : "ascending";
+    toast.info(`Sorted by ${fieldName} ${direction}`);
+  };
+
+  const getFieldDisplayName = (field: string) => {
+    const fieldNames: { [key: string]: string } = {
+      group_code: "Group Code",
+      group_name: "Group Name"
+    };
+    return fieldNames[field] || field;
+  };
+
+  const getSortIndicator = (field: string) => {
+    if (sortField !== field) return null;
+    return sortDirection === "asc" ? " ↑" : " ↓";
+  };
+
   const handleDelete = async (itemGroup: ItemGroup) => {
     if (window.confirm("Are you sure you want to delete this Item Group?")) {
       setLoading(true);
@@ -105,20 +172,6 @@ export const ItemGroupPage = () => {
     }
   };
 
-  const handleSortByName = () => {
-    setItemGroups((prev) =>
-      [...prev].sort((a, b) => a.group_name.localeCompare(b.group_name))
-    );
-    toast.info("Sorted by Name");
-  };
-
-  const handleSortByCode = () => {
-    setItemGroups((prev) =>
-      [...prev].sort((a, b) => a.group_code.localeCompare(b.group_code))
-    );
-    toast.info("Sorted by Code");
-  };
-
   return (
     <>
       <ToastContainer position="bottom-right" autoClose={3000} />
@@ -126,15 +179,15 @@ export const ItemGroupPage = () => {
         <div className="flex justify-between items-center px-6">
           <Title pageTitle="Item Groups" />
           <div className="flex justify-end items-center mb-4 gap-3">
-             <div className="px-6 ">
-          <input
-            type="text"
-            placeholder="Search by name or code"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-md text-sm dark:bg-gray-700 dark:text-white dark:border-gray-600"
-          />
-        </div>
+            <div className="px-6">
+              <input
+                type="text"
+                placeholder="Search by name or code"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md text-sm dark:bg-gray-700 dark:text-white dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
 
             <button
               onClick={() => navigate("/itemgroup/create")}
@@ -187,23 +240,15 @@ export const ItemGroupPage = () => {
                       <div className="absolute right-full top-0 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-40 py-1">
                         <button
                           className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
-                          onClick={() => {
-                            setMoreDropdownOpen(false);
-                            setSortMenuOpen(false);
-                            handleSortByName();
-                          }}
+                          onClick={() => handleSort("group_code")}
                         >
-                          Sort by Name
+                          Sort by Group Code{getSortIndicator("group_code")}
                         </button>
                         <button
                           className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
-                          onClick={() => {
-                            setMoreDropdownOpen(false);
-                            setSortMenuOpen(false);
-                            handleSortByCode();
-                          }}
+                          onClick={() => handleSort("group_name")}
                         >
-                          Sort by Code
+                          Sort by Group Name{getSortIndicator("group_name")}
                         </button>
                       </div>
                     )}
@@ -214,7 +259,6 @@ export const ItemGroupPage = () => {
           </div>
         </div>
 
-       
         <div className="overflow-x-auto flex-1 w-full overflow-auto pb-6">
           {loading ? (
             <div className="flex justify-center items-center py-10">
@@ -226,9 +270,18 @@ export const ItemGroupPage = () => {
             <table className="w-full min-w-[700px] text-base bg-white dark:bg-gray-800">
               <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-sm">
                 <tr>
-      
-                  <th className="px-4 py-3 text-[12px] text-left">Group Code</th>
-                  <th className="px-4 py-3 text-[12px] text-left">Group Name</th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                    onClick={() => handleSort("group_code")}
+                  >
+                    Group Code{getSortIndicator("group_code")}
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                    onClick={() => handleSort("group_name")}
+                  >
+                    Group Name{getSortIndicator("group_name")}
+                  </th>
                   <th className="px-4 py-3 text-[12px]"></th>
                 </tr>
               </thead>
@@ -241,7 +294,6 @@ export const ItemGroupPage = () => {
                     onMouseEnter={() => setHoveredRow(group.id)}
                     onMouseLeave={() => setHoveredRow(null)}
                   >
-                 
                     <td className="px-4 py-3 text-[12px] text-left">{group.group_code}</td>
                     <td className="px-4 py-3 text-[12px] text-left">{group.group_name}</td>
                     <td className="flex justify-center gap-2 relative">

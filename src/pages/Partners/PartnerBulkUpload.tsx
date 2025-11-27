@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { FaUpload, FaFileExcel, FaTimes, FaSpinner } from "react-icons/fa";
 import axiosInstance from "../../utils/axiosInstance";
 import DownloadPartnerTemplateButton from "../../utils/helperFunctions/download_partner.template";
@@ -6,6 +6,7 @@ import DownloadPartnerTemplateButton from "../../utils/helperFunctions/download_
 const PartnerBulkUpload: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -58,13 +59,26 @@ const PartnerBulkUpload: React.FC = () => {
         alert("Bulk upload completed successfully!");
       }
 
-      setFile(null);
+      // Reset the file input after successful upload
+      resetFileInput();
     } catch (error) {
       console.error("Upload failed:", error);
       alert("Upload failed. Please try again.");
     } finally {
       setIsUploading(false);
     }
+  };
+
+  const resetFileInput = () => {
+    setFile(null);
+    // Reset the file input value to allow selecting the same file again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleRemoveFile = () => {
+    resetFileInput();
   };
 
   return (
@@ -82,6 +96,7 @@ const PartnerBulkUpload: React.FC = () => {
         <label className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md">
           <span>Browse files</span>
           <input
+            ref={fileInputRef}
             type="file"
             className="hidden"
             onChange={handleFileChange}
@@ -110,7 +125,7 @@ const PartnerBulkUpload: React.FC = () => {
               </div>
             </div>
             <button
-              onClick={() => setFile(null)}
+              onClick={handleRemoveFile}
               className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
             >
               <FaTimes />

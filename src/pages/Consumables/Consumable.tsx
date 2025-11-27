@@ -22,7 +22,60 @@ export const Consumable = () => {
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortField, setSortField] = useState<string>("");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const navigate = useNavigate();
+
+  // Sort items function
+  const sortItems = (items: Item[]) => {
+    if (!sortField) return items;
+
+    return [...items].sort((a, b) => {
+      let aValue = a[sortField as keyof Item];
+      let bValue = b[sortField as keyof Item];
+
+      // Handle string fields with case-insensitive sorting
+      if (typeof aValue === "string" && typeof bValue === "string") {
+        aValue = aValue.toLowerCase();
+        bValue = bValue.toLowerCase();
+      }
+
+      // Handle numeric fields
+      if (sortField === "item_qty_in_hand") {
+        aValue = Number(aValue) || 0;
+        bValue = Number(bValue) || 0;
+      }
+
+      // Handle nested object fields
+      if (sortField === "uom") {
+        aValue = a.uom?.unit_name?.toLowerCase() || "";
+        bValue = b.uom?.unit_name?.toLowerCase() || "";
+      }
+
+      if (sortField === "itemGroup") {
+        aValue = a.itemGroup?.group_name?.toLowerCase() || "";
+        bValue = b.itemGroup?.group_name?.toLowerCase() || "";
+      }
+
+      if (sortField === "oem") {
+        aValue = a.oem?.oem_name?.toLowerCase() || "";
+        bValue = b.oem?.oem_name?.toLowerCase() || "";
+      }
+
+      if (sortField === "revenueAccount") {
+        aValue = a.revenueAccount?.revenue_value || 0;
+        bValue = b.revenueAccount?.revenue_value || 0;
+      }
+
+      if (aValue < bValue) {
+        return sortDirection === "asc" ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortDirection === "asc" ? 1 : -1;
+      }
+      return 0;
+    });
+  };
 
   const exportToExcel = () => {
     const dataToExport = filteredItems.map((item) => ({
@@ -41,6 +94,7 @@ export const Consumable = () => {
     XLSX.utils.book_append_sheet(workbook, worksheet, "Consumables");
 
     XLSX.writeFile(workbook, "ConsumableItems.xlsx");
+    toast.success("Exported to Excel successfully!");
   };
 
   useEffect(() => {
@@ -48,10 +102,17 @@ export const Consumable = () => {
     const results = items.filter(
       (item) =>
         item.item_code.toLowerCase().includes(lower) ||
-        item.item_name.toLowerCase().includes(lower)
+        item.item_name.toLowerCase().includes(lower) ||
+        item.product_type?.toLowerCase().includes(lower) ||
+        item.uom?.unit_name?.toLowerCase().includes(lower) ||
+        item.itemGroup?.group_name?.toLowerCase().includes(lower) ||
+        item.oem?.oem_name?.toLowerCase().includes(lower)
     );
-    setFilteredItems(results);
-  }, [searchTerm, items]);
+    
+    // Apply sorting to filtered results
+    const sortedResults = sortItems(results);
+    setFilteredItems(sortedResults);
+  }, [searchTerm, items, sortField, sortDirection]);
 
   const {
     currentPage,
@@ -65,7 +126,7 @@ export const Consumable = () => {
     try {
       const data = await fetchItems();
       setItems(data);
-      setFilteredItems(data);
+      setFilteredItems(sortItems(data));
     } catch (err) {
       toast.error("Failed to fetch items");
     }
@@ -92,6 +153,50 @@ export const Consumable = () => {
     }
   }, [dropdownOpen]);
 
+  useEffect(() => {
+    const handleClickOutside = () => setSortMenuOpen(false);
+    if (sortMenuOpen) {
+      document.addEventListener("click", handleClickOutside);
+      return () => document.removeEventListener("click", handleClickOutside);
+    }
+  }, [sortMenuOpen]);
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      // Toggle direction if same field
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // Set new field with ascending direction
+      setSortField(field);
+      setSortDirection("asc");
+    }
+    setSortMenuOpen(false);
+    setMoreDropdownOpen(false);
+    
+    const fieldName = getFieldDisplayName(field);
+    const direction = sortField === field ? (sortDirection === "asc" ? "descending" : "ascending") : "ascending";
+    toast.info(`Sorted by ${fieldName} ${direction}`);
+  };
+
+  const getFieldDisplayName = (field: string) => {
+    const fieldNames: { [key: string]: string } = {
+      item_code: "Item Code",
+      item_name: "Item Name",
+      product_type: "Product Type",
+      item_qty_in_hand: "Quantity",
+      uom: "UOM",
+      itemGroup: "Group",
+      oem: "OEM",
+      revenueAccount: "Revenue Value"
+    };
+    return fieldNames[field] || field;
+  };
+
+  const getSortIndicator = (field: string) => {
+    if (sortField !== field) return null;
+    return sortDirection === "asc" ? " ↑" : " ↓";
+  };
+
   const handleDelete = async (item: Item) => {
     if (window.confirm("Are you sure you want to delete this item?")) {
       setLoading(true);
@@ -106,20 +211,6 @@ export const Consumable = () => {
     }
   };
 
-  const handleSortByName = () => {
-    setItems((prev) =>
-      [...prev].sort((a, b) => a.item_name.localeCompare(b.item_name))
-    );
-    toast.info("Sorted by Name");
-  };
-
-  const handleSortByCode = () => {
-    setItems((prev) =>
-      [...prev].sort((a, b) => a.item_code.localeCompare(b.item_code))
-    );
-    toast.info("Sorted by Code");
-  };
-
   return (
     <>
       <ToastContainer position="bottom-right" autoClose={3000} />
@@ -129,10 +220,10 @@ export const Consumable = () => {
           <div className="flex items-center gap-3 mb-4">
             <input
               type="text"
-              placeholder="Search by code or name"
+              placeholder="Search by code, name, type, UOM, group, or OEM"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring focus:border-blue-300"
+              className="px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-80"
             />
             <button
               onClick={() => navigate("/consumable/create")}
@@ -184,24 +275,46 @@ export const Consumable = () => {
                     {sortMenuOpen && (
                       <div className="absolute right-full top-0 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-40 py-1">
                         <button
-                          className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
-                          onClick={() => {
-                            setMoreDropdownOpen(false);
-                            setSortMenuOpen(false);
-                            handleSortByName();
-                          }}
+                          className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                          onClick={() => handleSort("item_code")}
                         >
-                          Sort by Name
+                          Sort by Code{getSortIndicator("item_code")}
                         </button>
                         <button
-                          className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
-                          onClick={() => {
-                            setMoreDropdownOpen(false);
-                            setSortMenuOpen(false);
-                            handleSortByCode();
-                          }}
+                          className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                          onClick={() => handleSort("item_name")}
                         >
-                          Sort by Code
+                          Sort by Name{getSortIndicator("item_name")}
+                        </button>
+                        <button
+                          className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                          onClick={() => handleSort("product_type")}
+                        >
+                          Sort by Product Type{getSortIndicator("product_type")}
+                        </button>
+                        <button
+                          className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                          onClick={() => handleSort("item_qty_in_hand")}
+                        >
+                          Sort by Quantity{getSortIndicator("item_qty_in_hand")}
+                        </button>
+                        <button
+                          className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                          onClick={() => handleSort("uom")}
+                        >
+                          Sort by UOM{getSortIndicator("uom")}
+                        </button>
+                        <button
+                          className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                          onClick={() => handleSort("itemGroup")}
+                        >
+                          Sort by Group{getSortIndicator("itemGroup")}
+                        </button>
+                        <button
+                          className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                          onClick={() => handleSort("oem")}
+                        >
+                          Sort by OEM{getSortIndicator("oem")}
                         </button>
                       </div>
                     )}
@@ -223,13 +336,30 @@ export const Consumable = () => {
             <table className="w-full min-w-[700px] text-base bg-white dark:bg-gray-800">
               <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-sm">
                 <tr>
-                 
-                  <th className="px-4 py-3 text-[12px] text-left">Code</th>
-                  <th className="px-4 py-3 text-[12px] text-left">Item Name</th>
-                  <th className="px-4 py-3 text-[12px] text-left">
-                    Product Type
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                    onClick={() => handleSort("item_code")}
+                  >
+                    Code{getSortIndicator("item_code")}
                   </th>
-                  <th className="px-4 py-3 text-[12px] text-left">Quantity</th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                    onClick={() => handleSort("item_name")}
+                  >
+                    Item Name{getSortIndicator("item_name")}
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                    onClick={() => handleSort("product_type")}
+                  >
+                    Product Type{getSortIndicator("product_type")}
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                    onClick={() => handleSort("item_qty_in_hand")}
+                  >
+                    Quantity{getSortIndicator("item_qty_in_hand")}
+                  </th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
@@ -242,7 +372,6 @@ export const Consumable = () => {
                     onMouseEnter={() => setHoveredRow(item.id)}
                     onMouseLeave={() => setHoveredRow(null)}
                   >
-                   
                     <td className="px-4 py-3 text-[12px] text-left">
                       {item.item_code}
                     </td>

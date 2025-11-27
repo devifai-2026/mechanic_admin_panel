@@ -4,7 +4,6 @@ import { handleExport } from "../../utils/helperFunctions/downloadExcel_forProje
 import { usePagination } from "../../hooks/usePagination";
 import Pagination from "../../utils/Pagination";
 import { FaCircleChevronDown, FaPlus } from "react-icons/fa6";
-import { FaSortAmountUp, FaSortAmountDown } from "react-icons/fa";
 import { toast, ToastContainer } from "react-toastify";
 import ProjectDrawer from "./ProjectDrawer";
 import { useNavigate } from "react-router";
@@ -28,17 +27,18 @@ type ProjectRow = {
 export const Projects = () => {
   const [projects, setProjects] = useState<ProjectRow[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [selectedProject, setSelectedProject] = useState<ProjectRow | null>(
-    null
-  );
+  const [selectedProject, setSelectedProject] = useState<ProjectRow | null>(null);
   const [loading, setLoading] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [rawProjects, setRawProjects] = useState<any[]>([]);
   const [optionsDropdownOpen, setOptionsDropdownOpen] = useState(false);
-  const [sortAsc, setSortAsc] = useState(true);
+  const [moreDropdownOpen, setMoreDropdownOpen] = useState(false);
+  const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortField, setSortField] = useState<string>("");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   const {
     currentPage,
@@ -64,6 +64,36 @@ export const Projects = () => {
   useEffect(() => {
     fetchAndSetProjects();
   }, []);
+
+  // Sort projects function
+  const sortProjects = (projects: ProjectRow[]) => {
+    if (!sortField) return projects;
+
+    return [...projects].sort((a, b) => {
+      let aValue = a[sortField as keyof ProjectRow];
+      let bValue = b[sortField as keyof ProjectRow];
+
+      // Handle string fields with case-insensitive sorting
+      if (typeof aValue === "string" && typeof bValue === "string") {
+        aValue = aValue.toLowerCase();
+        bValue = bValue.toLowerCase();
+      }
+
+      // Handle numeric fields
+      if (["equipments", "staff", "locations"].includes(sortField)) {
+        aValue = Number(aValue) || 0;
+        bValue = Number(bValue) || 0;
+      }
+
+      if (aValue < bValue) {
+        return sortDirection === "asc" ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortDirection === "asc" ? 1 : -1;
+      }
+      return 0;
+    });
+  };
 
   useEffect(() => {
     const filtered = rawProjects.filter((p: any) => {
@@ -117,8 +147,10 @@ export const Projects = () => {
       };
     });
 
-    setProjects(simplified);
-  }, [searchQuery, rawProjects]);
+    // Apply sorting to the filtered data
+    const sortedProjects = sortProjects(simplified);
+    setProjects(sortedProjects);
+  }, [searchQuery, rawProjects, sortField, sortDirection]);
 
   useEffect(() => {
     const handleClickOutside = () => {
@@ -128,6 +160,22 @@ export const Projects = () => {
     document.addEventListener("click", handleClickOutside);
     return () => document.removeEventListener("click", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    const handleClickOutside = () => setMoreDropdownOpen(false);
+    if (moreDropdownOpen) {
+      document.addEventListener("click", handleClickOutside);
+      return () => document.removeEventListener("click", handleClickOutside);
+    }
+  }, [moreDropdownOpen]);
+
+  useEffect(() => {
+    const handleClickOutside = () => setSortMenuOpen(false);
+    if (sortMenuOpen) {
+      document.addEventListener("click", handleClickOutside);
+      return () => document.removeEventListener("click", handleClickOutside);
+    }
+  }, [sortMenuOpen]);
 
   const handleExportProjects = () => {
     const formattedProjects = rawProjects.map((project) => {
@@ -154,14 +202,41 @@ export const Projects = () => {
     toast.success("Exported as Excel!");
   };
 
-  const handleSort = () => {
-    const sorted = [...projects].sort((a, b) =>
-      sortAsc
-        ? a.projectNo.localeCompare(b.projectNo)
-        : b.projectNo.localeCompare(a.projectNo)
-    );
-    setProjects(sorted);
-    setSortAsc(!sortAsc);
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      // Toggle direction if same field
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // Set new field with ascending direction
+      setSortField(field);
+      setSortDirection("asc");
+    }
+    setSortMenuOpen(false);
+    setMoreDropdownOpen(false);
+    
+    const fieldName = getFieldDisplayName(field);
+    const direction = sortField === field ? (sortDirection === "asc" ? "descending" : "ascending") : "ascending";
+    toast.info(`Sorted by ${fieldName} ${direction}`);
+  };
+
+  const getFieldDisplayName = (field: string) => {
+    const fieldNames: { [key: string]: string } = {
+      projectNo: "Project No",
+      customer: "Customer",
+      orderNo: "Order No",
+      contractStart: "Contract Start",
+      duration: "Duration",
+      revenues: "Revenues",
+      equipments: "Equipments",
+      staff: "Staff",
+      locations: "Locations"
+    };
+    return fieldNames[field] || field;
+  };
+
+  const getSortIndicator = (field: string) => {
+    if (sortField !== field) return null;
+    return sortDirection === "asc" ? " ↑" : " ↓";
   };
 
   return (
@@ -193,37 +268,95 @@ export const Projects = () => {
             className="p-2 bg-gray-200 border-2 border-gray-50 rounded-lg cursor-pointer relative"
             onClick={(e) => {
               e.stopPropagation();
-              setOptionsDropdownOpen(!optionsDropdownOpen);
+              setMoreDropdownOpen(!moreDropdownOpen);
             }}
           >
             <IoIosMore />
-            {optionsDropdownOpen && (
+            {moreDropdownOpen && (
               <div className="absolute right-0 mt-2 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-30 py-1">
                 <button
                   className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
-                  onClick={handleExportProjects}
+                  onClick={() => {
+                    setMoreDropdownOpen(false);
+                    handleExportProjects();
+                  }}
                 >
                   Export
                 </button>
                 <button
                   className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
                   onClick={() => {
+                    setMoreDropdownOpen(false);
                     fetchAndSetProjects();
-                    setOptionsDropdownOpen(false);
                   }}
                 >
                   Refresh
                 </button>
-                <button
-                  className="w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
-                  onClick={() => {
-                    handleSort();
-                    setOptionsDropdownOpen(false);
-                  }}
+                <div
+                  className="relative"
+                  onMouseEnter={() => setSortMenuOpen(true)}
+                  onMouseLeave={() => setSortMenuOpen(false)}
                 >
-                  {sortAsc ? <FaSortAmountDown /> : <FaSortAmountUp />}
-                  <span>Sort {sortAsc ? "Asc" : "Desc"}</span>
-                </button>
+                  <button
+                    className="w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition flex justify-between items-center"
+                    onClick={() => setSortMenuOpen((prev) => !prev)}
+                  >
+                    Sort
+                    <span className="ml-2">&gt;</span>
+                  </button>
+                  {sortMenuOpen && (
+                    <div className="absolute right-full top-0 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-40 py-1">
+                      <button
+                        className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                        onClick={() => handleSort("projectNo")}
+                      >
+                        Sort by Project No{getSortIndicator("projectNo")}
+                      </button>
+                      <button
+                        className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                        onClick={() => handleSort("customer")}
+                      >
+                        Sort by Customer{getSortIndicator("customer")}
+                      </button>
+                      <button
+                        className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                        onClick={() => handleSort("orderNo")}
+                      >
+                        Sort by Order No{getSortIndicator("orderNo")}
+                      </button>
+                      <button
+                        className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                        onClick={() => handleSort("contractStart")}
+                      >
+                        Sort by Contract Start{getSortIndicator("contractStart")}
+                      </button>
+                      <button
+                        className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                        onClick={() => handleSort("duration")}
+                      >
+                        Sort by Duration{getSortIndicator("duration")}
+                      </button>
+                      <button
+                        className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                        onClick={() => handleSort("equipments")}
+                      >
+                        Sort by Equipments{getSortIndicator("equipments")}
+                      </button>
+                      <button
+                        className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                        onClick={() => handleSort("staff")}
+                      >
+                        Sort by Staff{getSortIndicator("staff")}
+                      </button>
+                      <button
+                        className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                        onClick={() => handleSort("locations")}
+                      >
+                        Sort by Locations{getSortIndicator("locations")}
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </span>
@@ -246,33 +379,56 @@ export const Projects = () => {
                   <table className="w-full min-w-full text-base">
                     <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-sm sticky top-0 z-10">
                       <tr>
-                       
-                        <th className="px-4 py-3 text-[12px] text-left">
-                          Project No
+                        <th 
+                          className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                          onClick={() => handleSort("projectNo")}
+                        >
+                          Project No{getSortIndicator("projectNo")}
                         </th>
-                        <th className="px-4 py-3 text-[12px] text-left">
-                          Customer
+                        <th 
+                          className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                          onClick={() => handleSort("customer")}
+                        >
+                          Customer{getSortIndicator("customer")}
                         </th>
-                        <th className="px-4 py-3 text-[12px] text-left">
-                          Order No
+                        <th 
+                          className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                          onClick={() => handleSort("orderNo")}
+                        >
+                          Order No{getSortIndicator("orderNo")}
                         </th>
-                        <th className="px-4 py-3 text-[12px] text-left">
-                          Contract Start
+                        <th 
+                          className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                          onClick={() => handleSort("contractStart")}
+                        >
+                          Contract Start{getSortIndicator("contractStart")}
                         </th>
-                        <th className="px-4 py-3 text-[12px] text-left">
-                          Duration
+                        <th 
+                          className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                          onClick={() => handleSort("duration")}
+                        >
+                          Duration{getSortIndicator("duration")}
                         </th>
                         <th className="px-4 py-3 text-[12px] text-left">
                           Revenues
                         </th>
-                        <th className="px-4 py-3 text-[12px] text-left">
-                          Equipments
+                        <th 
+                          className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                          onClick={() => handleSort("equipments")}
+                        >
+                          Equipments{getSortIndicator("equipments")}
                         </th>
-                        <th className="px-4 py-3 text-[12px] text-left">
-                          Staff
+                        <th 
+                          className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                          onClick={() => handleSort("staff")}
+                        >
+                          Staff{getSortIndicator("staff")}
                         </th>
-                        <th className="px-4 py-3 text-[12px] text-left">
-                          Locations
+                        <th 
+                          className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                          onClick={() => handleSort("locations")}
+                        >
+                          Locations{getSortIndicator("locations")}
                         </th>
                         <th className="px-4 py-3 text-[12px] text-left"></th>
                       </tr>
@@ -290,7 +446,6 @@ export const Projects = () => {
                           onMouseEnter={() => setHoveredRow(project.projectNo)}
                           onMouseLeave={() => setHoveredRow(null)}
                         >
-                        
                           <td className="px-4 py-2 text-[12px] text-left">
                             {project.projectNo}
                           </td>

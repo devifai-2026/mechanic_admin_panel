@@ -21,8 +21,45 @@ export const AccountPage = () => {
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortField, setSortField] = useState<string>("");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const navigate = useNavigate();
 
+  // Sort accounts function
+  const sortAccounts = (accounts: Account[]) => {
+    if (!sortField) return accounts;
+
+    return [...accounts].sort((a, b) => {
+      let aValue = a[sortField as keyof Account];
+      let bValue = b[sortField as keyof Account];
+
+      // Handle string fields with case-insensitive sorting
+      if (typeof aValue === "string" && typeof bValue === "string") {
+        aValue = aValue.toLowerCase();
+        bValue = bValue.toLowerCase();
+      }
+
+      // Handle nested object fields for account group
+      if (sortField === "group") {
+        aValue = a.group?.account_group_name?.toLowerCase() || a.account_group?.toLowerCase() || "";
+        bValue = b.group?.account_group_name?.toLowerCase() || b.account_group?.toLowerCase() || "";
+      }
+
+      // Handle empty/null values
+      aValue = aValue || "";
+      bValue = bValue || "";
+
+      if (aValue < bValue) {
+        return sortDirection === "asc" ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortDirection === "asc" ? 1 : -1;
+      }
+      return 0;
+    });
+  };
+
+  // Filtered and sorted data
   const filteredAccounts = accounts.filter((acc) => {
     const groupName =
       acc.group?.account_group_name || acc.account_group || "";
@@ -34,12 +71,14 @@ export const AccountPage = () => {
     );
   });
 
+  const sortedAccounts = sortAccounts(filteredAccounts);
+
   const {
     currentPage,
     setCurrentPage,
     totalPages,
     paginatedData: paginatedAccounts,
-  } = usePagination(filteredAccounts, rowsPerPage);
+  } = usePagination(sortedAccounts, rowsPerPage);
 
   const handleExportToExcel = () => {
     const exportData = accounts.map((acc) => ({
@@ -54,6 +93,7 @@ export const AccountPage = () => {
     XLSX.utils.book_append_sheet(workbook, worksheet, "Accounts");
 
     XLSX.writeFile(workbook, "accounts.xlsx");
+    toast.success("Accounts exported successfully!");
   };
 
   const fetchAndSetAccounts = async () => {
@@ -87,6 +127,45 @@ export const AccountPage = () => {
     }
   }, [dropdownOpen]);
 
+  useEffect(() => {
+    const handleClickOutside = () => setSortMenuOpen(false);
+    if (sortMenuOpen) {
+      document.addEventListener("click", handleClickOutside);
+      return () => document.removeEventListener("click", handleClickOutside);
+    }
+  }, [sortMenuOpen]);
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      // Toggle direction if same field
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // Set new field with ascending direction
+      setSortField(field);
+      setSortDirection("asc");
+    }
+    setSortMenuOpen(false);
+    setMoreDropdownOpen(false);
+    
+    const fieldName = getFieldDisplayName(field);
+    const direction = sortField === field ? (sortDirection === "asc" ? "descending" : "ascending") : "ascending";
+    toast.info(`Sorted by ${fieldName} ${direction}`);
+  };
+
+  const getFieldDisplayName = (field: string) => {
+    const fieldNames: { [key: string]: string } = {
+      account_code: "Account Code",
+      account_name: "Account Name",
+      group: "Account Group"
+    };
+    return fieldNames[field] || field;
+  };
+
+  const getSortIndicator = (field: string) => {
+    if (sortField !== field) return null;
+    return sortDirection === "asc" ? " ↑" : " ↓";
+  };
+
   const handleDelete = async (account: Account) => {
     if (window.confirm("Are you sure you want to delete this Account?")) {
       setLoading(true);
@@ -99,20 +178,6 @@ export const AccountPage = () => {
       }
       setLoading(false);
     }
-  };
-
-  const handleSortByName = () => {
-    setAccounts((prev) =>
-      [...prev].sort((a, b) => a.account_name.localeCompare(b.account_name))
-    );
-    toast.info("Sorted by Name");
-  };
-
-  const handleSortByCode = () => {
-    setAccounts((prev) =>
-      [...prev].sort((a, b) => a.account_code.localeCompare(b.account_code))
-    );
-    toast.info("Sorted by Code");
   };
 
   return (
@@ -128,7 +193,7 @@ export const AccountPage = () => {
               placeholder="Search account..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="px-3 py-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-60"
             />
             <button
               onClick={() => navigate("/account/create")}
@@ -181,23 +246,21 @@ export const AccountPage = () => {
                       <div className="absolute right-full top-0 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-40 py-1">
                         <button
                           className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
-                          onClick={() => {
-                            setMoreDropdownOpen(false);
-                            setSortMenuOpen(false);
-                            handleSortByName();
-                          }}
+                          onClick={() => handleSort("account_code")}
                         >
-                          Sort by Name
+                          Sort by Account Code{getSortIndicator("account_code")}
                         </button>
                         <button
                           className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
-                          onClick={() => {
-                            setMoreDropdownOpen(false);
-                            setSortMenuOpen(false);
-                            handleSortByCode();
-                          }}
+                          onClick={() => handleSort("account_name")}
                         >
-                          Sort by Code
+                          Sort by Account Name{getSortIndicator("account_name")}
+                        </button>
+                        <button
+                          className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
+                          onClick={() => handleSort("group")}
+                        >
+                          Sort by Account Group{getSortIndicator("group")}
                         </button>
                       </div>
                     )}
@@ -219,10 +282,24 @@ export const AccountPage = () => {
             <table className="w-full min-w-[700px] text-base bg-white dark:bg-gray-800">
               <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-sm">
                 <tr>
-                
-                  <th className="px-4 py-3 text-[12px] text-left">Account Code</th>
-                  <th className="px-4 py-3 text-[12px] text-left">Account Name</th>
-                  <th className="px-4 py-3 text-[12px] text-left">Account Group</th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                    onClick={() => handleSort("account_code")}
+                  >
+                    Account Code{getSortIndicator("account_code")}
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                    onClick={() => handleSort("account_name")}
+                  >
+                    Account Name{getSortIndicator("account_name")}
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                    onClick={() => handleSort("group")}
+                  >
+                    Account Group{getSortIndicator("group")}
+                  </th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>

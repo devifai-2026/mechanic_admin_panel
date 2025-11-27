@@ -25,19 +25,48 @@ export const Roles = () => {
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortField, setSortField] = useState<string>("");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const navigate = useNavigate();
 
+  // Sort roles function
+  const sortRoles = (roles: RoleRow[]) => {
+    if (!sortField) return roles;
+
+    return [...roles].sort((a, b) => {
+      let aValue = a[sortField as keyof RoleRow];
+      let bValue = b[sortField as keyof RoleRow];
+
+      // Handle string fields with case-insensitive sorting
+      if (typeof aValue === "string" && typeof bValue === "string") {
+        aValue = aValue.toLowerCase();
+        bValue = bValue.toLowerCase();
+      }
+
+      if (aValue < bValue) {
+        return sortDirection === "asc" ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortDirection === "asc" ? 1 : -1;
+      }
+      return 0;
+    });
+  };
+
+  // Filtered and sorted data
   const filteredRoles = roles.filter((role) =>
     role.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     role.code.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const sortedRoles = sortRoles(filteredRoles);
 
   const {
     currentPage,
     setCurrentPage,
     totalPages,
     paginatedData: paginatedRoles,
-  } = usePagination(filteredRoles, rowsPerPage);
+  } = usePagination(sortedRoles, rowsPerPage);
 
   const convertRolesToCSV = (roles: RoleRow[]) => {
     const header = ["ID", "Code", "Name"];
@@ -71,11 +100,12 @@ export const Roles = () => {
     setLoading(true);
     try {
       const data = await fetchRoles();
-      setRoles(data.map((item: any) => ({
+      const rolesData = data.map((item: any) => ({
         id: item.id,
         code: item.code,
         name: item.name,
-      })));
+      }));
+      setRoles(rolesData);
     } catch (err) {
       console.error("Failed to fetch roles", err);
     }
@@ -102,6 +132,44 @@ export const Roles = () => {
     }
   }, [dropdownOpen]);
 
+  useEffect(() => {
+    const handleClickOutside = () => setSortMenuOpen(false);
+    if (sortMenuOpen) {
+      document.addEventListener("click", handleClickOutside);
+      return () => document.removeEventListener("click", handleClickOutside);
+    }
+  }, [sortMenuOpen]);
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      // Toggle direction if same field
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // Set new field with ascending direction
+      setSortField(field);
+      setSortDirection("asc");
+    }
+    setSortMenuOpen(false);
+    setMoreDropdownOpen(false);
+    
+    const fieldName = getFieldDisplayName(field);
+    const direction = sortField === field ? (sortDirection === "asc" ? "descending" : "ascending") : "ascending";
+    toast.info(`Sorted by ${fieldName} ${direction}`);
+  };
+
+  const getFieldDisplayName = (field: string) => {
+    const fieldNames: { [key: string]: string } = {
+      code: "Code",
+      name: "Name"
+    };
+    return fieldNames[field] || field;
+  };
+
+  const getSortIndicator = (field: string) => {
+    if (sortField !== field) return null;
+    return sortDirection === "asc" ? " ↑" : " ↓";
+  };
+
   const handleDelete = async (role: RoleRow) => {
     if (window.confirm("Are you sure you want to delete this role?")) {
       setLoading(true);
@@ -117,16 +185,6 @@ export const Roles = () => {
     }
   };
 
-  const handleSortByName = () => {
-    setRoles((prev) => [...prev].sort((a, b) => a.name.localeCompare(b.name)));
-    toast.info("Sorted by Name");
-  };
-
-  const handleSortByCode = () => {
-    setRoles((prev) => [...prev].sort((a, b) => a.code.localeCompare(b.code)));
-    toast.info("Sorted by Code");
-  };
-
   return (
     <>
       <ToastContainer position="bottom-right" autoClose={3000} />
@@ -137,7 +195,7 @@ export const Roles = () => {
             <input
               type="text"
               placeholder="Search by name or code..."
-              className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-gray-900 text-sm"
+              className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-900 text-sm w-60"
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
@@ -194,23 +252,15 @@ export const Roles = () => {
                       <div className="absolute right-full top-0 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-40 py-1">
                         <button
                           className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
-                          onClick={() => {
-                            setMoreDropdownOpen(false);
-                            setSortMenuOpen(false);
-                            handleSortByName();
-                          }}
+                          onClick={() => handleSort("code")}
                         >
-                          Sort by Name
+                          Sort by Code{getSortIndicator("code")}
                         </button>
                         <button
                           className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
-                          onClick={() => {
-                            setMoreDropdownOpen(false);
-                            setSortMenuOpen(false);
-                            handleSortByCode();
-                          }}
+                          onClick={() => handleSort("name")}
                         >
-                          Sort by Code
+                          Sort by Name{getSortIndicator("name")}
                         </button>
                       </div>
                     )}
@@ -230,9 +280,18 @@ export const Roles = () => {
             <table className="w-full min-w-[700px] text-base bg-white dark:bg-gray-800">
               <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-sm">
                 <tr>
-                
-                  <th className="px-4 py-3 text-[12px] text-left">Code</th>
-                  <th className="px-4 py-3 text-[12px] text-left">Role Name</th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                    onClick={() => handleSort("code")}
+                  >
+                    Code{getSortIndicator("code")}
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                    onClick={() => handleSort("name")}
+                  >
+                    Role Name{getSortIndicator("name")}
+                  </th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
@@ -246,7 +305,6 @@ export const Roles = () => {
                       onMouseEnter={() => setHoveredRow(role.id)}
                       onMouseLeave={() => setHoveredRow(null)}
                     >
-                     
                       <td className="px-4 py-3 text-[12px] text-left">{role.code}</td>
                       <td className="px-4 py-3 text-[12px] text-left">{role.name}</td>
                       <td className="flex justify-center gap-2 relative">

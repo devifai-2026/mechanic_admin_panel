@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-// import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import { usePagination } from "../../hooks/usePagination";
 import Pagination from "../../utils/Pagination";
 import { toast, ToastContainer } from "react-toastify";
@@ -24,8 +23,50 @@ export const Organisations = () => {
   const [moreDropdownOpen, setMoreDropdownOpen] = useState(false);
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [rowsPerPage, setRowsPerPage] = useState(20);
-  const [searchTerm, setSearchTerm] = useState(""); // 🆕 Search input state
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortField, setSortField] = useState<string>("");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const navigate = useNavigate();
+
+  // Sort organisations function
+  const sortOrganisations = (organisations: Organisation[]) => {
+    if (!sortField) return organisations;
+
+    return [...organisations].sort((a, b) => {
+      let aValue = a[sortField as keyof Organisation];
+      let bValue = b[sortField as keyof Organisation];
+
+      // Handle string fields with case-insensitive sorting
+      if (typeof aValue === "string" && typeof bValue === "string") {
+        aValue = aValue.toLowerCase();
+        bValue = bValue.toLowerCase();
+      }
+
+      if (aValue < bValue) {
+        return sortDirection === "asc" ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortDirection === "asc" ? 1 : -1;
+      }
+      return 0;
+    });
+  };
+
+  // Filtered and sorted data
+  const filteredOrganisations = organisations.filter(
+    (org) =>
+      org.org_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      org.org_code.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const sortedOrganisations = sortOrganisations(filteredOrganisations);
+
+  const {
+    currentPage,
+    setCurrentPage,
+    totalPages,
+    paginatedData: paginatedOrganisations,
+  } = usePagination(sortedOrganisations, rowsPerPage);
 
   const convertOrganisationsToCSV = (orgs: Organisation[]) => {
     const header = ["Organisation Name", "Organisation Code"];
@@ -62,19 +103,6 @@ export const Organisations = () => {
     toast.success("Organisations exported successfully!");
   };
 
-  const filteredOrganisations = organisations.filter(
-    (org) =>
-      org.org_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      org.org_code.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const {
-    currentPage,
-    setCurrentPage,
-    totalPages,
-    paginatedData: paginatedOrganisations,
-  } = usePagination(filteredOrganisations, rowsPerPage); // 🆕 use filtered data
-
   const fetchAndSetOrganisations = async () => {
     setLoading(true);
     try {
@@ -106,6 +134,44 @@ export const Organisations = () => {
     }
   }, [dropdownOpen]);
 
+  useEffect(() => {
+    const handleClickOutside = () => setSortMenuOpen(false);
+    if (sortMenuOpen) {
+      document.addEventListener("click", handleClickOutside);
+      return () => document.removeEventListener("click", handleClickOutside);
+    }
+  }, [sortMenuOpen]);
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      // Toggle direction if same field
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // Set new field with ascending direction
+      setSortField(field);
+      setSortDirection("asc");
+    }
+    setSortMenuOpen(false);
+    setMoreDropdownOpen(false);
+    
+    const fieldName = getFieldDisplayName(field);
+    const direction = sortField === field ? (sortDirection === "asc" ? "descending" : "ascending") : "ascending";
+    toast.info(`Sorted by ${fieldName} ${direction}`);
+  };
+
+  const getFieldDisplayName = (field: string) => {
+    const fieldNames: { [key: string]: string } = {
+      org_code: "Organisation Code",
+      org_name: "Organisation Name"
+    };
+    return fieldNames[field] || field;
+  };
+
+  const getSortIndicator = (field: string) => {
+    if (sortField !== field) return null;
+    return sortDirection === "asc" ? " ↑" : " ↓";
+  };
+
   const handleDelete = async (org: Organisation) => {
     if (window.confirm("Are you sure you want to delete this organisation?")) {
       setLoading(true);
@@ -120,37 +186,22 @@ export const Organisations = () => {
     }
   };
 
-  const handleSortByName = () => {
-    setOrganisations((prev) =>
-      [...prev].sort((a, b) => a.org_name.localeCompare(b.org_name))
-    );
-    toast.info("Sorted by Name");
-  };
-
-  const handleSortByCode = () => {
-    setOrganisations((prev) =>
-      [...prev].sort((a, b) => a.org_code.localeCompare(b.org_code))
-    );
-    toast.info("Sorted by Code");
-  };
-
   return (
     <>
-      {/* <PageBreadcrumb pageTitle="Organisations" /> */}
       <ToastContainer position="bottom-right" autoClose={3000} />
       <div className="min-h-screen w-full dark:bg-gray-900 flex flex-col">
         <div className="flex justify-between items-center px-6">
           <Title pageTitle="Organisations" />
           <div className="flex justify-end items-center mb-4 gap-3">
-             <div className="">
-          <input
-            type="text"
-            placeholder="Search by Name or Code"
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-900 dark:text-white"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
+            <div className="">
+              <input
+                type="text"
+                placeholder="Search by Name or Code"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-900 dark:text-white"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
             <button
               onClick={() => navigate("/organisations/create")}
               className="flex items-center justify-center gap-2 px-4 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition"
@@ -201,24 +252,16 @@ export const Organisations = () => {
                     {sortMenuOpen && (
                       <div className="absolute right-full top-0 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-40 py-1">
                         <button
-                          className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
-                          onClick={() => {
-                            setMoreDropdownOpen(false);
-                            setSortMenuOpen(false);
-                            handleSortByName();
-                          }}
+                          className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                          onClick={() => handleSort("org_code")}
                         >
-                          Sort by Name
+                          Sort by Organisation Code{getSortIndicator("org_code")}
                         </button>
                         <button
-                          className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
-                          onClick={() => {
-                            setMoreDropdownOpen(false);
-                            setSortMenuOpen(false);
-                            handleSortByCode();
-                          }}
+                          className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                          onClick={() => handleSort("org_name")}
                         >
-                          Sort by Code
+                          Sort by Organisation Name{getSortIndicator("org_name")}
                         </button>
                       </div>
                     )}
@@ -228,9 +271,6 @@ export const Organisations = () => {
             </span>
           </div>
         </div>
-
-        {/* 🆕 Search bar */}
-       
 
         <div className="overflow-x-auto flex-1 w-full overflow-auto pb-6">
           {loading ? (
@@ -243,9 +283,18 @@ export const Organisations = () => {
             <table className="w-full min-w-[700px] text-base bg-white dark:bg-gray-800">
               <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-sm">
                 <tr>
-                 
-                  <th className="px-4 py-3 text-[12px] text-left">Organisation Code</th>
-                  <th className="px-4 py-3 text-[12px] text-left">Organisation Name</th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                    onClick={() => handleSort("org_code")}
+                  >
+                    Organisation Code{getSortIndicator("org_code")}
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                    onClick={() => handleSort("org_name")}
+                  >
+                    Organisation Name{getSortIndicator("org_name")}
+                  </th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
@@ -258,7 +307,6 @@ export const Organisations = () => {
                     onMouseEnter={() => setHoveredRow(org.id)}
                     onMouseLeave={() => setHoveredRow(null)}
                   >
-                  
                     <td className="px-4 py-3 text-[12px] text-left">{org.org_code}</td>
                     <td className="px-4 py-3 text-[12px] text-left">{org.org_name}</td>
                     <td className="flex justify-center gap-2 relative">

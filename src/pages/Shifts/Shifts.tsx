@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-// import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import { fetchShifts, deleteShift } from "../../apis/shiftApi";
 import { usePagination } from "../../hooks/usePagination";
 import Pagination from "../../utils/Pagination";
@@ -29,20 +28,59 @@ export const Shifts = () => {
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortField, setSortField] = useState<string>("");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const navigate = useNavigate();
+
+  // Sort shifts function
+  const sortShifts = (shifts: ShiftRow[]) => {
+    if (!sortField) return shifts;
+
+    return [...shifts].sort((a, b) => {
+      let aValue = a[sortField as keyof ShiftRow];
+      let bValue = b[sortField as keyof ShiftRow];
+
+      // Handle string fields with case-insensitive sorting
+      if (typeof aValue === "string" && typeof bValue === "string") {
+        aValue = aValue.toLowerCase();
+        bValue = bValue.toLowerCase();
+      }
+
+      // Handle time fields - convert to comparable format
+      if (sortField === "shift_from_time" || sortField === "shift_to_time") {
+        // Convert time strings to minutes since midnight for proper comparison
+        const timeToMinutes = (timeStr: string) => {
+          if (!timeStr) return 0;
+          const [hours, minutes] = timeStr.split(':').map(Number);
+          return hours * 60 + minutes;
+        };
+        
+        aValue = timeToMinutes(aValue as string);
+        bValue = timeToMinutes(bValue as string);
+      }
+
+      if (aValue < bValue) {
+        return sortDirection === "asc" ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortDirection === "asc" ? 1 : -1;
+      }
+      return 0;
+    });
+  };
 
   const fetchAndSetShifts = async () => {
     setLoading(true);
     try {
       const data = await fetchShifts();
-      setShifts(
-        data.map((item: any) => ({
-          id: item.id,
-          shift_code: item.shift_code,
-          shift_from_time: item.shift_from_time,
-          shift_to_time: item.shift_to_time,
-        }))
-      );
+      const shiftsData = data.map((item: any) => ({
+        id: item.id,
+        shift_code: item.shift_code,
+        shift_from_time: item.shift_from_time,
+        shift_to_time: item.shift_to_time,
+      }));
+      setShifts(shiftsData);
+      setFilteredShifts(sortShifts(shiftsData));
     } catch (err) {
       console.error("Failed to fetch shifts", err);
     }
@@ -52,6 +90,20 @@ export const Shifts = () => {
   useEffect(() => {
     fetchAndSetShifts();
   }, []);
+
+  // Filtered and sorted data
+  const filteredShifts = shifts.filter((shift) =>
+    shift.shift_code.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const sortedShifts = sortShifts(filteredShifts);
+
+  const {
+    currentPage,
+    setCurrentPage,
+    totalPages,
+    paginatedData: paginatedShifts,
+  } = usePagination(sortedShifts, rowsPerPage);
 
   useEffect(() => {
     const handleClickOutside = () => setMoreDropdownOpen(false);
@@ -69,16 +121,13 @@ export const Shifts = () => {
     }
   }, [dropdownOpen]);
 
-  const filteredShifts = shifts.filter((shift) =>
-    shift.shift_code.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const {
-    currentPage,
-    setCurrentPage,
-    totalPages,
-    paginatedData: paginatedShifts,
-  } = usePagination(filteredShifts, rowsPerPage);
+  useEffect(() => {
+    const handleClickOutside = () => setSortMenuOpen(false);
+    if (sortMenuOpen) {
+      document.addEventListener("click", handleClickOutside);
+      return () => document.removeEventListener("click", handleClickOutside);
+    }
+  }, [sortMenuOpen]);
 
   const exportShiftsToExcel = (shifts: ShiftRow[]) => {
     const worksheet = XLSX.utils.json_to_sheet(
@@ -102,6 +151,38 @@ export const Shifts = () => {
       data,
       `shifts_export_${new Date().toISOString().split("T")[0]}.xlsx`
     );
+    toast.success("Shifts exported successfully!");
+  };
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      // Toggle direction if same field
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // Set new field with ascending direction
+      setSortField(field);
+      setSortDirection("asc");
+    }
+    setSortMenuOpen(false);
+    setMoreDropdownOpen(false);
+    
+    const fieldName = getFieldDisplayName(field);
+    const direction = sortField === field ? (sortDirection === "asc" ? "descending" : "ascending") : "ascending";
+    toast.info(`Sorted by ${fieldName} ${direction}`);
+  };
+
+  const getFieldDisplayName = (field: string) => {
+    const fieldNames: { [key: string]: string } = {
+      shift_code: "Shift Code",
+      shift_from_time: "From Time",
+      shift_to_time: "To Time"
+    };
+    return fieldNames[field] || field;
+  };
+
+  const getSortIndicator = (field: string) => {
+    if (sortField !== field) return null;
+    return sortDirection === "asc" ? " ↑" : " ↓";
   };
 
   const handleDelete = async (shift: ShiftRow) => {
@@ -119,25 +200,8 @@ export const Shifts = () => {
     }
   };
 
-  const handleSortByCode = () => {
-    setShifts((prev) =>
-      [...prev].sort((a, b) => a.shift_code.localeCompare(b.shift_code))
-    );
-    toast.info("Sorted by Shift Code");
-  };
-
-  const handleSortByFromTime = () => {
-    setShifts((prev) =>
-      [...prev].sort((a, b) =>
-        a.shift_from_time.localeCompare(b.shift_from_time)
-      )
-    );
-    toast.info("Sorted by From Time");
-  };
-
   return (
     <>
-      {/* <PageBreadcrumb pageTitle="Shifts" /> */}
       <ToastContainer position="bottom-right" autoClose={3000} />
 
       <div className="min-h-screen h-full w-full dark:bg-gray-900 flex flex-col">
@@ -149,7 +213,7 @@ export const Shifts = () => {
               placeholder="Search Shift Code"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="px-3 py-1 border rounded-md text-sm focus:outline-none focus:ring focus:border-blue-400 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              className="px-3 py-1 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-60"
             />
             <button
               onClick={() => navigate("/shifts/create")}
@@ -204,23 +268,21 @@ export const Shifts = () => {
                       <div className="absolute right-full top-0 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-40 py-1">
                         <button
                           className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
-                          onClick={() => {
-                            setMoreDropdownOpen(false);
-                            setSortMenuOpen(false);
-                            handleSortByCode();
-                          }}
+                          onClick={() => handleSort("shift_code")}
                         >
-                          Sort by Shift Code
+                          Sort by Shift Code{getSortIndicator("shift_code")}
                         </button>
                         <button
                           className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
-                          onClick={() => {
-                            setMoreDropdownOpen(false);
-                            setSortMenuOpen(false);
-                            handleSortByFromTime();
-                          }}
+                          onClick={() => handleSort("shift_from_time")}
                         >
-                          Sort by From Time
+                          Sort by From Time{getSortIndicator("shift_from_time")}
+                        </button>
+                        <button
+                          className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                          onClick={() => handleSort("shift_to_time")}
+                        >
+                          Sort by To Time{getSortIndicator("shift_to_time")}
                         </button>
                       </div>
                     )}
@@ -242,10 +304,24 @@ export const Shifts = () => {
             <table className="w-full min-w-[900px] text-base bg-white dark:bg-gray-800">
               <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-sm">
                 <tr>
-                 
-                  <th className="px-4 py-3 text-[12px] text-left">Shift Code</th>
-                  <th className="px-4 py-3 text-[12px] text-left">From Time</th>
-                  <th className="px-4 py-3 text-[12px] text-left">To Time</th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                    onClick={() => handleSort("shift_code")}
+                  >
+                    Shift Code{getSortIndicator("shift_code")}
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                    onClick={() => handleSort("shift_from_time")}
+                  >
+                    From Time{getSortIndicator("shift_from_time")}
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                    onClick={() => handleSort("shift_to_time")}
+                  >
+                    To Time{getSortIndicator("shift_to_time")}
+                  </th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
@@ -259,7 +335,6 @@ export const Shifts = () => {
                       onMouseEnter={() => setHoveredRow(shift.id)}
                       onMouseLeave={() => setHoveredRow(null)}
                     >
-                     
                       <td className="px-4 py-3 text-[12px] text-left">{shift.shift_code}</td>
                       <td className="px-4 py-3 text-[12px] text-left">{shift.shift_from_time}</td>
                       <td className="px-4 py-3 text-[12px] text-left">{shift.shift_to_time}</td>

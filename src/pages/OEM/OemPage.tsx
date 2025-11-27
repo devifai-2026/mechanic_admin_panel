@@ -21,7 +21,33 @@ export const OemPage = () => {
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortField, setSortField] = useState<string>("");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const navigate = useNavigate();
+
+  // Sort OEMs function
+  const sortOems = (oems: OEM[]) => {
+    if (!sortField) return oems;
+
+    return [...oems].sort((a, b) => {
+      let aValue = a[sortField as keyof OEM];
+      let bValue = b[sortField as keyof OEM];
+
+      // Handle string fields with case-insensitive sorting
+      if (typeof aValue === "string" && typeof bValue === "string") {
+        aValue = aValue.toLowerCase();
+        bValue = bValue.toLowerCase();
+      }
+
+      if (aValue < bValue) {
+        return sortDirection === "asc" ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortDirection === "asc" ? 1 : -1;
+      }
+      return 0;
+    });
+  };
 
   const {
     currentPage,
@@ -35,7 +61,7 @@ export const OemPage = () => {
     try {
       const data = await getAllOEMs();
       setOems(data);
-      setFilteredOems(data); // apply to filtered as well
+      setFilteredOems(sortOems(data));
     } catch (err) {
       toast.error("Failed to fetch OEMs");
     } finally {
@@ -48,8 +74,33 @@ export const OemPage = () => {
   }, []);
 
   useEffect(() => {
+    const handleClickOutside = () => setMoreDropdownOpen(false);
+    if (moreDropdownOpen) {
+      document.addEventListener("click", handleClickOutside);
+      return () => document.removeEventListener("click", handleClickOutside);
+    }
+  }, [moreDropdownOpen]);
+
+  useEffect(() => {
+    const handleClickOutside = () => setDropdownOpen(null);
+    if (dropdownOpen) {
+      document.addEventListener("click", handleClickOutside);
+      return () => document.removeEventListener("click", handleClickOutside);
+    }
+  }, [dropdownOpen]);
+
+  useEffect(() => {
+    const handleClickOutside = () => setSortMenuOpen(false);
+    if (sortMenuOpen) {
+      document.addEventListener("click", handleClickOutside);
+      return () => document.removeEventListener("click", handleClickOutside);
+    }
+  }, [sortMenuOpen]);
+
+  // Search and sort effect
+  useEffect(() => {
     if (searchTerm.trim() === "") {
-      setFilteredOems(oems);
+      setFilteredOems(sortOems(oems));
     } else {
       const lower = searchTerm.toLowerCase();
       const filtered = oems.filter(
@@ -57,9 +108,39 @@ export const OemPage = () => {
           item.oem_name.toLowerCase().includes(lower) ||
           item.oem_code.toLowerCase().includes(lower)
       );
-      setFilteredOems(filtered);
+      setFilteredOems(sortOems(filtered));
     }
-  }, [searchTerm, oems]);
+  }, [searchTerm, oems, sortField, sortDirection]);
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      // Toggle direction if same field
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // Set new field with ascending direction
+      setSortField(field);
+      setSortDirection("asc");
+    }
+    setSortMenuOpen(false);
+    setMoreDropdownOpen(false);
+    
+    const fieldName = getFieldDisplayName(field);
+    const direction = sortField === field ? (sortDirection === "asc" ? "descending" : "ascending") : "ascending";
+    toast.info(`Sorted by ${fieldName} ${direction}`);
+  };
+
+  const getFieldDisplayName = (field: string) => {
+    const fieldNames: { [key: string]: string } = {
+      oem_name: "OEM Name",
+      oem_code: "OEM Code"
+    };
+    return fieldNames[field] || field;
+  };
+
+  const getSortIndicator = (field: string) => {
+    if (sortField !== field) return null;
+    return sortDirection === "asc" ? " ↑" : " ↓";
+  };
 
   const handleDelete = async (oem: OEM) => {
     if (window.confirm("Are you sure you want to delete this OEM?")) {
@@ -76,20 +157,29 @@ export const OemPage = () => {
     }
   };
 
-  const handleSortByName = () => {
-    const sorted = [...filteredOems].sort((a, b) =>
-      a.oem_name.localeCompare(b.oem_name)
-    );
-    setFilteredOems(sorted);
-    toast.info("Sorted by Name");
-  };
+  const handleExport = () => {
+    if (filteredOems.length === 0) {
+      toast.info("No data to export");
+      return;
+    }
 
-  const handleSortByCode = () => {
-    const sorted = [...filteredOems].sort((a, b) =>
-      a.oem_code.localeCompare(b.oem_code)
+    const csvHeaders = ["OEM Name", "OEM Code"];
+    const csvRows = filteredOems.map((oem) =>
+      [oem.oem_name, oem.oem_code].join(",")
     );
-    setFilteredOems(sorted);
-    toast.info("Sorted by Code");
+    const csvContent = [csvHeaders.join(","), ...csvRows].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "oems_export.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast.success("OEMs exported successfully!");
   };
 
   return (
@@ -101,7 +191,7 @@ export const OemPage = () => {
           <input
             type="text"
             placeholder="Search by name or code"
-            className="px-4 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm"
+            className="px-4 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-60"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -123,16 +213,16 @@ export const OemPage = () => {
             {moreDropdownOpen && (
               <div className="absolute right-0 mt-2 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-30 py-1">
                 <button
-                  className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 transition"
+                  className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
                   onClick={() => {
                     setMoreDropdownOpen(false);
-                    toast.info("Export clicked");
+                    handleExport();
                   }}
                 >
                   Export
                 </button>
                 <button
-                  className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 transition"
+                  className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
                   onClick={() => {
                     setMoreDropdownOpen(false);
                     fetchAndSetOems();
@@ -146,7 +236,7 @@ export const OemPage = () => {
                   onMouseLeave={() => setSortMenuOpen(false)}
                 >
                   <button
-                    className="w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white flex justify-between items-center transition"
+                    className="w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition flex justify-between items-center"
                     onClick={() => setSortMenuOpen((prev) => !prev)}
                   >
                     Sort
@@ -155,24 +245,16 @@ export const OemPage = () => {
                   {sortMenuOpen && (
                     <div className="absolute right-full top-0 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-40 py-1">
                       <button
-                        className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white transition"
-                        onClick={() => {
-                          setMoreDropdownOpen(false);
-                          setSortMenuOpen(false);
-                          handleSortByName();
-                        }}
+                        className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                        onClick={() => handleSort("oem_name")}
                       >
-                        Sort by Name
+                        Sort by OEM Name{getSortIndicator("oem_name")}
                       </button>
                       <button
-                        className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white transition"
-                        onClick={() => {
-                          setMoreDropdownOpen(false);
-                          setSortMenuOpen(false);
-                          handleSortByCode();
-                        }}
+                        className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                        onClick={() => handleSort("oem_code")}
                       >
-                        Sort by Code
+                        Sort by OEM Code{getSortIndicator("oem_code")}
                       </button>
                     </div>
                   )}
@@ -195,9 +277,18 @@ export const OemPage = () => {
             <table className="w-full min-w-[700px] text-base bg-white dark:bg-gray-800">
               <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-sm">
                 <tr>
-                 
-                  <th className="px-4 py-3 text-left text-[12px]">OEM Name</th>
-                  <th className="px-4 py-3 text-left text-[12px]">OEM Code</th>
+                  <th 
+                    className="px-4 py-3 text-left text-[12px] cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                    onClick={() => handleSort("oem_name")}
+                  >
+                    OEM Name{getSortIndicator("oem_name")}
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-left text-[12px] cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                    onClick={() => handleSort("oem_code")}
+                  >
+                    OEM Code{getSortIndicator("oem_code")}
+                  </th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
@@ -210,7 +301,6 @@ export const OemPage = () => {
                     onMouseEnter={() => setHoveredRow(oem.id)}
                     onMouseLeave={() => setHoveredRow(null)}
                   >
-                    
                     <td className="px-4 py-3 text-left text-[12px]">
                       {oem.oem_name}
                     </td>
@@ -241,7 +331,7 @@ export const OemPage = () => {
                           onClick={(e) => e.stopPropagation()}
                         >
                           <button
-                            className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white transition"
+                            className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
                             onClick={() => {
                               setDropdownOpen(null);
                               navigate(`/oem/edit/${oem.id}`);
@@ -250,7 +340,7 @@ export const OemPage = () => {
                             Edit
                           </button>
                           <button
-                            className="block w-full text-left px-4 py-2 text-sm hover:bg-red-500 hover:text-white transition"
+                            className="block w-full text-left px-4 py-2 text-sm hover:bg-red-500 hover:text-white dark:hover:bg-gray-700 transition"
                             onClick={() => {
                               setDropdownOpen(null);
                               handleDelete(oem);

@@ -14,7 +14,6 @@ export const Equipments = () => {
   const [selectedEquipment, setSelectedEquipment] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
-  // const [equipmentGroups, setEquipmentGroups] = useState<any[]>([]);
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
   const [moreDropdownOpen, setMoreDropdownOpen] = useState(false);
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
@@ -25,13 +24,19 @@ export const Equipments = () => {
 
   const navigate = useNavigate();
 
-  // Sort equipments
+  // Sort equipments function
   const sortEquipments = (equipments: any[]) => {
     if (!sortField) return equipments;
 
     return [...equipments].sort((a, b) => {
       let aValue = a[sortField];
       let bValue = b[sortField];
+
+      // Handle string fields with case-insensitive sorting
+      if (typeof aValue === "string" && typeof bValue === "string") {
+        aValue = aValue.toLowerCase();
+        bValue = bValue.toLowerCase();
+      }
 
       // Handle date sorting
       if (sortField === "purchase_date") {
@@ -58,8 +63,10 @@ export const Equipments = () => {
   // Filtered and sorted data
   const filteredEquipments = equipments.filter(
     (eq) =>
-      eq.equipment_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      eq.equipment_sr_no.toLowerCase().includes(searchTerm.toLowerCase())
+      eq.equipment_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      eq.equipment_sr_no?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      eq.additional_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      eq.oemDetails?.oem_code?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const sortedEquipments = sortEquipments(filteredEquipments);
@@ -92,9 +99,9 @@ export const Equipments = () => {
       item.equipment_sr_no,
       item.additional_id,
       item.purchase_date,
-      item.oem,
+      item.oemDetails?.oem_code || "",
       item.purchase_cost,
-      item.equipment_group_id,
+      item.equipmentGroup?.map((group: any) => group.equipment_group).join(", ") || "",
     ]);
 
     let csvContent =
@@ -123,16 +130,22 @@ export const Equipments = () => {
     }
     setSortMenuOpen(false);
     setMoreDropdownOpen(false);
-
-    const fieldName =
-      field === "purchase_cost" ? "Purchase Cost" : "Purchase Date";
-    const direction =
-      sortField === field
-        ? sortDirection === "asc"
-          ? "descending"
-          : "ascending"
-        : "ascending";
+    
+    const fieldName = getFieldDisplayName(field);
+    const direction = sortField === field ? (sortDirection === "asc" ? "descending" : "ascending") : "ascending";
     toast.info(`Sorted by ${fieldName} ${direction}`);
+  };
+
+  const getFieldDisplayName = (field: string) => {
+    const fieldNames: { [key: string]: string } = {
+      equipment_name: "Equipment Name",
+      equipment_sr_no: "Serial No",
+      additional_id: "Additional ID",
+      purchase_date: "Purchase Date",
+      purchase_cost: "Purchase Cost",
+      oem_code: "OEM"
+    };
+    return fieldNames[field] || field;
   };
 
   const getSortIndicator = (field: string) => {
@@ -141,8 +154,6 @@ export const Equipments = () => {
   };
 
   useEffect(() => {
-   
-
     const fetchAndSetEquipments = async () => {
       setLoading(true);
       try {
@@ -154,7 +165,6 @@ export const Equipments = () => {
       setLoading(false);
     };
 
-   
     fetchAndSetEquipments();
   }, []);
 
@@ -173,6 +183,14 @@ export const Equipments = () => {
       return () => document.removeEventListener("click", handleClickOutside);
     }
   }, [dropdownOpen]);
+
+  useEffect(() => {
+    const handleClickOutside = () => setSortMenuOpen(false);
+    if (sortMenuOpen) {
+      document.addEventListener("click", handleClickOutside);
+      return () => document.removeEventListener("click", handleClickOutside);
+    }
+  }, [sortMenuOpen]);
 
   const handleView = (equipment: any) => {
     setSelectedEquipment(equipment);
@@ -194,6 +212,15 @@ export const Equipments = () => {
     }
   };
 
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "-";
+    const date = new Date(dateString);
+    const dd = String(date.getDate()).padStart(2, "0");
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const yyyy = date.getFullYear();
+    return `${dd}-${mm}-${yyyy}`;
+  };
+
   return (
     <>
       <ToastContainer position="bottom-right" autoClose={3000} />
@@ -204,10 +231,10 @@ export const Equipments = () => {
           <div className="flex flex-wrap justify-end items-center mb-4 gap-3">
             <input
               type="text"
-              placeholder="Search by Name or Serial No"
+              placeholder="Search by Name, Serial No, Additional ID, or OEM"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="px-3 py-1 border rounded-md text-sm w-[200px] focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-1 border rounded-md text-sm w-[250px] focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <button
               onClick={() => navigate("/equipments/create")}
@@ -260,17 +287,33 @@ export const Equipments = () => {
                       <div className="absolute right-full top-0 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-40 py-1">
                         <button
                           className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
-                          onClick={() => handleSort("purchase_cost")}
+                          onClick={() => handleSort("equipment_name")}
                         >
-                          Sort by Purchase Cost
-                          {getSortIndicator("purchase_cost")}
+                          Sort by Equipment Name{getSortIndicator("equipment_name")}
+                        </button>
+                        <button
+                          className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                          onClick={() => handleSort("equipment_sr_no")}
+                        >
+                          Sort by Serial No{getSortIndicator("equipment_sr_no")}
+                        </button>
+                        <button
+                          className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                          onClick={() => handleSort("additional_id")}
+                        >
+                          Sort by Additional ID{getSortIndicator("additional_id")}
                         </button>
                         <button
                           className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
                           onClick={() => handleSort("purchase_date")}
                         >
-                          Sort by Purchase Date
-                          {getSortIndicator("purchase_date")}
+                          Sort by Purchase Date{getSortIndicator("purchase_date")}
+                        </button>
+                        <button
+                          className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                          onClick={() => handleSort("purchase_cost")}
+                        >
+                          Sort by Purchase Cost{getSortIndicator("purchase_cost")}
                         </button>
                       </div>
                     )}
@@ -292,15 +335,23 @@ export const Equipments = () => {
             <table className="w-full min-w-[900px] text-base bg-white dark:bg-gray-800">
               <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-sm">
                 <tr>
-                 
-                  <th className="px-4 py-3 text-[12px] text-left">
-                    Equipment Name
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                    onClick={() => handleSort("equipment_name")}
+                  >
+                    Equipment Name{getSortIndicator("equipment_name")}
                   </th>
-                  <th className="px-4 py-3 text-[12px] text-left">
-                    Equipment Serial No
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                    onClick={() => handleSort("equipment_sr_no")}
+                  >
+                    Equipment Serial No{getSortIndicator("equipment_sr_no")}
                   </th>
-                  <th className="px-4 py-3 text-[12px] text-left">
-                    Additional ID
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                    onClick={() => handleSort("additional_id")}
+                  >
+                    Additional ID{getSortIndicator("additional_id")}
                   </th>
                   <th
                     className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
@@ -308,7 +359,9 @@ export const Equipments = () => {
                   >
                     Purchase Date{getSortIndicator("purchase_date")}
                   </th>
-                  <th className="px-4 py-3 text-[12px] text-left">OEM</th>
+                  <th className="px-4 py-3 text-[12px] text-left">
+                    OEM
+                  </th>
                   <th
                     className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
                     onClick={() => handleSort("purchase_cost")}
@@ -328,7 +381,6 @@ export const Equipments = () => {
                     onMouseEnter={() => setHoveredRow(equipment.id)}
                     onMouseLeave={() => setHoveredRow(null)}
                   >
-                   
                     <td className="px-4 py-3 text-[12px] text-left">
                       {equipment.equipment_name}
                     </td>
@@ -339,14 +391,7 @@ export const Equipments = () => {
                       {equipment.additional_id}
                     </td>
                     <td className="px-4 py-3 text-[12px] text-left">
-                      {(() => {
-                        if (!equipment.purchase_date) return "-";
-                        const date = new Date(equipment.purchase_date);
-                        const dd = String(date.getDate()).padStart(2, "0");
-                        const mm = String(date.getMonth() + 1).padStart(2, "0");
-                        const yyyy = date.getFullYear();
-                        return `${dd}-${mm}-${yyyy}`;
-                      })()}
+                      {formatDate(equipment.purchase_date)}
                     </td>
                     <td className="px-4 py-3 text-[12px] text-left">
                       {equipment?.oemDetails?.oem_code}
@@ -393,14 +438,17 @@ export const Equipments = () => {
                             className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
                             onClick={() => {
                               navigate(`/equipments/edit/${equipment.id}`);
-                              toast.info("Edit clicked");
+                              setDropdownOpen(null);
                             }}
                           >
                             Edit
                           </button>
                           <button
                             className="block w-full text-left px-4 py-2 text-sm hover:bg-red-500 hover:text-white dark:hover:bg-gray-700 transition"
-                            onClick={() => handleDelete(equipment)}
+                            onClick={() => {
+                              setDropdownOpen(null);
+                              handleDelete(equipment);
+                            }}
                           >
                             Delete
                           </button>

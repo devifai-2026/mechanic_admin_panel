@@ -8,7 +8,6 @@ import { FaCircleChevronDown, FaPlus } from "react-icons/fa6";
 import { IoIosMore } from "react-icons/io";
 import { deleteEquipmentGroup, fetchEquipmentGroups } from "../../apis/equipmentGroupApi";
 import EquipmentDrawer from "./EquipmentDrawer";
-// import { deleteEquipmentGroup } from "../../apis/equipmentGroupApi"; // Uncomment when ready
 
 export const EquipmentGroup = () => {
     const [equipmentGroups, setEquipmentGroups] = useState<any[]>([]);
@@ -21,21 +20,53 @@ export const EquipmentGroup = () => {
     const [rowsPerPage, setRowsPerPage] = useState(20);
     const [searchTerm, setSearchTerm] = useState("");
     const [drawerOpen, setDrawerOpen] = useState(false);
-    // const [selectedOem, setSelectedOem] = useState(null);
+    const [sortField, setSortField] = useState<string>("");
+    const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
     const navigate = useNavigate();
 
+    // Sort equipment groups function
+    const sortEquipmentGroups = (groups: any[]) => {
+        if (!sortField) return groups;
+
+        return [...groups].sort((a, b) => {
+            let aValue = a[sortField];
+            let bValue = b[sortField];
+
+            // Handle string fields with case-insensitive sorting
+            if (typeof aValue === "string" && typeof bValue === "string") {
+                aValue = aValue.toLowerCase();
+                bValue = bValue.toLowerCase();
+            }
+
+            // Handle empty/null values
+            aValue = aValue || "";
+            bValue = bValue || "";
+
+            if (aValue < bValue) {
+                return sortDirection === "asc" ? -1 : 1;
+            }
+            if (aValue > bValue) {
+                return sortDirection === "asc" ? 1 : -1;
+            }
+            return 0;
+        });
+    };
+
+    // Filtered and sorted data
     const filteredEquipmentGroups = equipmentGroups.filter((group) =>
         group.equipment_group?.toLowerCase()?.includes(searchTerm.toLowerCase()) ||
         group.equip_grp_code?.toLowerCase()?.includes(searchTerm.toLowerCase())
     );
+
+    const sortedEquipmentGroups = sortEquipmentGroups(filteredEquipmentGroups);
 
     const {
         currentPage,
         setCurrentPage,
         totalPages,
         paginatedData,
-    } = usePagination(filteredEquipmentGroups, rowsPerPage);
+    } = usePagination(sortedEquipmentGroups, rowsPerPage);
 
     const fetchAndSetEquipmentGroups = async () => {
         setLoading(true);
@@ -68,11 +99,48 @@ export const EquipmentGroup = () => {
         }
     }, [dropdownOpen]);
 
+    useEffect(() => {
+        const handleClickOutside = () => setSortMenuOpen(false);
+        if (sortMenuOpen) {
+            document.addEventListener("click", handleClickOutside);
+            return () => document.removeEventListener("click", handleClickOutside);
+        }
+    }, [sortMenuOpen]);
+
+    const handleSort = (field: string) => {
+        if (sortField === field) {
+            // Toggle direction if same field
+            setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+        } else {
+            // Set new field with ascending direction
+            setSortField(field);
+            setSortDirection("asc");
+        }
+        setSortMenuOpen(false);
+        setMoreDropdownOpen(false);
+        
+        const fieldName = getFieldDisplayName(field);
+        const direction = sortField === field ? (sortDirection === "asc" ? "descending" : "ascending") : "ascending";
+        toast.info(`Sorted by ${fieldName} ${direction}`);
+    };
+
+    const getFieldDisplayName = (field: string) => {
+        const fieldNames: { [key: string]: string } = {
+            equip_grp_code: "Group Code",
+            equipment_group: "Group Name"
+        };
+        return fieldNames[field] || field;
+    };
+
+    const getSortIndicator = (field: string) => {
+        if (sortField !== field) return null;
+        return sortDirection === "asc" ? " ↑" : " ↓";
+    };
+
     const handleDelete = async (group: any) => {
         if (window.confirm("Are you sure you want to delete this equipment group?")) {
             setLoading(true);
             try {
-                // await deleteEquipmentGroup(group.id);
                 await deleteEquipmentGroup(group.id);
                 await fetchAndSetEquipmentGroups();
                 toast.success("Equipment group deleted successfully!");
@@ -83,18 +151,29 @@ export const EquipmentGroup = () => {
         }
     };
 
-    const handleSortByName = () => {
-        setEquipmentGroups((prev) =>
-            [...prev].sort((a, b) => a.equipment_group.localeCompare(b.equipment_group))
-        );
-        toast.info("Sorted by Name");
-    };
+    const handleExport = () => {
+        if (filteredEquipmentGroups.length === 0) {
+            toast.info("No data to export");
+            return;
+        }
 
-    const handleSortByCode = () => {
-        setEquipmentGroups((prev) =>
-            [...prev].sort((a, b) => a.equip_grp_code.localeCompare(b.equip_grp_code))
+        const csvHeaders = ["Group Code", "Group Name"];
+        const csvRows = filteredEquipmentGroups.map((group) =>
+            [group.equip_grp_code, group.equipment_group].join(",")
         );
-        toast.info("Sorted by Code");
+        const csvContent = [csvHeaders.join(","), ...csvRows].join("\n");
+
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", "equipment_groups.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        toast.success("Equipment groups exported successfully!");
     };
 
     return (
@@ -109,7 +188,7 @@ export const EquipmentGroup = () => {
                     <input
                         type="text"
                         placeholder="Search by name or code"
-                        className="px-4 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm"
+                        className="px-4 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-60"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
@@ -136,7 +215,7 @@ export const EquipmentGroup = () => {
                                     className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
                                     onClick={() => {
                                         setMoreDropdownOpen(false);
-                                        toast.info("Export clicked");
+                                        handleExport();
                                     }}
                                 >
                                     Export
@@ -165,23 +244,15 @@ export const EquipmentGroup = () => {
                                         <div className="absolute right-full top-0 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-40 py-1">
                                             <button
                                                 className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
-                                                onClick={() => {
-                                                    setMoreDropdownOpen(false);
-                                                    setSortMenuOpen(false);
-                                                    handleSortByName();
-                                                }}
+                                                onClick={() => handleSort("equip_grp_code")}
                                             >
-                                                Sort by Name
+                                                Sort by Group Code{getSortIndicator("equip_grp_code")}
                                             </button>
                                             <button
                                                 className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
-                                                onClick={() => {
-                                                    setMoreDropdownOpen(false);
-                                                    setSortMenuOpen(false);
-                                                    handleSortByCode();
-                                                }}
+                                                onClick={() => handleSort("equipment_group")}
                                             >
-                                                Sort by Code
+                                                Sort by Group Name{getSortIndicator("equipment_group")}
                                             </button>
                                         </div>
                                     )}
@@ -204,10 +275,19 @@ export const EquipmentGroup = () => {
                     ) : (
                         <table className="w-full min-w-[700px] text-base bg-white dark:bg-gray-800">
                             <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-sm">
-                                <tr >
-                                   
-                                    <th className="px-4 py-3 text-[12px] text-left">Group Code</th>
-                                    <th className="px-4 py-3 text-[12px] text-left">Group Name</th>
+                                <tr>
+                                    <th 
+                                        className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                                        onClick={() => handleSort("equip_grp_code")}
+                                    >
+                                        Group Code{getSortIndicator("equip_grp_code")}
+                                    </th>
+                                    <th 
+                                        className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                                        onClick={() => handleSort("equipment_group")}
+                                    >
+                                        Group Name{getSortIndicator("equipment_group")}
+                                    </th>
                                     <th className="px-4 py-3"></th>
                                 </tr>
                             </thead>
@@ -216,7 +296,6 @@ export const EquipmentGroup = () => {
                                     <tr
                                         key={group.id}
                                         className="hover:bg-gray-50 dark:hover:bg-gray-700 transition cursor-pointer"
-
                                         onClick={() => {
                                             setSelectedGroup(group)
                                             setDrawerOpen(true);
@@ -224,7 +303,6 @@ export const EquipmentGroup = () => {
                                         onMouseEnter={() => setHoveredRow(group.id)}
                                         onMouseLeave={() => setHoveredRow(null)}
                                     >
-                                        
                                         <td className="px-4 py-3 text-[12px] text-left">
                                             {group.equip_grp_code}
                                         </td>

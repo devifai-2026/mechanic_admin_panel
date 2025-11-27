@@ -33,7 +33,6 @@ type EmployeeRow = {
   position?: string;
 };
 
-
 export const Employees = () => {
   const [employees, setEmployees] = useState<any[]>([]);
   const [filteredEmployees, setFilteredEmployees] = useState<EmployeeRow[]>([]);
@@ -45,6 +44,8 @@ export const Employees = () => {
   const [moreDropdownOpen, setMoreDropdownOpen] = useState(false);
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [rowsPerPage, setRowsPerPage] = useState(20);
+  const [sortField, setSortField] = useState<string>("");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const navigate = useNavigate();
 
   const {
@@ -54,8 +55,7 @@ export const Employees = () => {
     paginatedData: paginatedEmployees,
   } = usePagination(filteredEmployees, rowsPerPage);
 
-
-  console.log({ employees })
+  console.log({ employees });
 
   const fetchAndSetEmployees = async () => {
     setLoading(true);
@@ -69,8 +69,6 @@ export const Employees = () => {
         storeManager: "Store Manager",
         accountManager: "Account Manager",
         projectManager: "Project Manager",
-
-        // Add other mappings if needed
       };
 
       const simplified = data.map((e: any) => ({
@@ -105,7 +103,6 @@ export const Employees = () => {
     }
   };
 
-
   useEffect(() => {
     fetchAndSetEmployees();
   }, []);
@@ -126,17 +123,65 @@ export const Employees = () => {
     }
   }, [dropdownOpen]);
 
-  // 👇 Search filtering effect
   useEffect(() => {
-    if (searchTerm.trim() === "") {
-      setFilteredEmployees(employees);
-    } else {
-      const filtered = employees.filter((e) =>
+    const handleClickOutside = () => setSortMenuOpen(false);
+    if (sortMenuOpen) {
+      document.addEventListener("click", handleClickOutside);
+      return () => document.removeEventListener("click", handleClickOutside);
+    }
+  }, [sortMenuOpen]);
+
+  // Sort employees function
+  const sortEmployees = (employees: EmployeeRow[]) => {
+    if (!sortField) return employees;
+
+    return [...employees].sort((a, b) => {
+      let aValue = a[sortField as keyof EmployeeRow];
+      let bValue = b[sortField as keyof EmployeeRow];
+
+      // Handle string fields with case-insensitive sorting
+      if (typeof aValue === "string" && typeof bValue === "string") {
+        aValue = aValue.toLowerCase();
+        bValue = bValue.toLowerCase();
+      }
+
+      // Handle numeric fields
+      if (sortField === "age") {
+        aValue = Number(aValue) || 0;
+        bValue = Number(bValue) || 0;
+      }
+
+      // Handle boolean field for active status
+      if (sortField === "active") {
+        aValue = (aValue === true || aValue === "Yes") ? 1 : 0;
+        bValue = (bValue === true || bValue === "Yes") ? 1 : 0;
+      }
+
+      if (aValue < bValue) {
+        return sortDirection === "asc" ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortDirection === "asc" ? 1 : -1;
+      }
+      return 0;
+    });
+  };
+
+  // 👇 Search filtering and sorting effect
+  useEffect(() => {
+    let filtered = employees;
+    
+    // Apply search filter
+    if (searchTerm.trim() !== "") {
+      filtered = employees.filter((e) =>
         e.emp_name.toLowerCase().includes(searchTerm.toLowerCase())
       );
-      setFilteredEmployees(filtered);
     }
-  }, [searchTerm, employees]);
+    
+    // Apply sorting
+    const sortedEmployees = sortEmployees(filtered);
+    setFilteredEmployees(sortedEmployees);
+  }, [searchTerm, employees, sortField, sortDirection]);
 
   const handleDelete = async (employee: EmployeeRow) => {
     if (!window.confirm(`Are you sure you want to delete ${employee.emp_name}?`)) {
@@ -160,14 +205,43 @@ export const Employees = () => {
     }
   };
 
-  const handleSortByName = () => {
-    setEmployees((prev) => [...prev].sort((a, b) => a.emp_name.localeCompare(b.emp_name)));
-    toast.info("Sorted by Name");
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      // Toggle direction if same field
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // Set new field with ascending direction
+      setSortField(field);
+      setSortDirection("asc");
+    }
+    setSortMenuOpen(false);
+    setMoreDropdownOpen(false);
+    
+    const fieldName = getFieldDisplayName(field);
+    const direction = sortField === field ? (sortDirection === "asc" ? "descending" : "ascending") : "ascending";
+    toast.info(`Sorted by ${fieldName} ${direction}`);
   };
 
-  const handleSortByEmpId = () => {
-    setEmployees((prev) => [...prev].sort((a, b) => a.emp_id.localeCompare(b.emp_id)));
-    toast.info("Sorted by Emp ID");
+  const getFieldDisplayName = (field: string) => {
+    const fieldNames: { [key: string]: string } = {
+      emp_id: "Employee ID",
+      emp_name: "Name",
+      age: "Age",
+      bloodGroup: "Blood Group",
+      shift: "Shift",
+      role: "Role",
+      app_access_role: "App Role",
+      active: "Active Status",
+      state: "State",
+      city: "City",
+      pincode: "Pincode"
+    };
+    return fieldNames[field] || field;
+  };
+
+  const getSortIndicator = (field: string) => {
+    if (sortField !== field) return null;
+    return sortDirection === "asc" ? " ↑" : " ↓";
   };
 
   const handleExport = () => {
@@ -240,23 +314,51 @@ export const Employees = () => {
                       <div className="absolute right-full top-0 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-40 py-1">
                         <button
                           className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
-                          onClick={() => {
-                            setMoreDropdownOpen(false);
-                            setSortMenuOpen(false);
-                            handleSortByName();
-                          }}
+                          onClick={() => handleSort("emp_id")}
                         >
-                          Sort by Name
+                          Sort by Emp ID{getSortIndicator("emp_id")}
                         </button>
                         <button
                           className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
-                          onClick={() => {
-                            setMoreDropdownOpen(false);
-                            setSortMenuOpen(false);
-                            handleSortByEmpId();
-                          }}
+                          onClick={() => handleSort("emp_name")}
                         >
-                          Sort by Emp ID
+                          Sort by Name{getSortIndicator("emp_name")}
+                        </button>
+                        <button
+                          className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                          onClick={() => handleSort("age")}
+                        >
+                          Sort by Age{getSortIndicator("age")}
+                        </button>
+                        <button
+                          className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                          onClick={() => handleSort("bloodGroup")}
+                        >
+                          Sort by Blood Group{getSortIndicator("bloodGroup")}
+                        </button>
+                        <button
+                          className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                          onClick={() => handleSort("shift")}
+                        >
+                          Sort by Shift{getSortIndicator("shift")}
+                        </button>
+                        <button
+                          className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                          onClick={() => handleSort("role")}
+                        >
+                          Sort by Role{getSortIndicator("role")}
+                        </button>
+                        <button
+                          className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                          onClick={() => handleSort("app_access_role")}
+                        >
+                          Sort by App Role{getSortIndicator("app_access_role")}
+                        </button>
+                        <button
+                          className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                          onClick={() => handleSort("active")}
+                        >
+                          Sort by Active Status{getSortIndicator("active")}
                         </button>
                       </div>
                     )}
@@ -267,9 +369,6 @@ export const Employees = () => {
           </div>
         </div>
 
-
-
-
         <div className="overflow-x-auto flex-1 w-full overflow-auto pb-6">
           {loading ? (
             <div className="flex justify-center items-center py-10">
@@ -279,15 +378,54 @@ export const Employees = () => {
             <table className="w-full min-w-[1100px] text-base bg-white dark:bg-gray-800">
               <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-sm">
                 <tr>
-                 
-                  <th className="px-4 py-3 text-[12px] text-left">Emp ID</th>
-                  <th className="px-4 py-3 text-[12px] text-left">Name</th>
-                  <th className="px-4 py-3 text-[12px] text-left">Age</th>
-                  <th className="px-4 py-3 text-[12px] text-left">Blood Group</th>
-                  <th className="px-4 py-3 text-[12px] text-left">Shift</th>
-                  <th className="px-4 py-3 text-[12px] text-left">Role</th>
-                  <th className="px-4 py-3 text-[12px] text-left">App Role</th>
-                  <th className="px-4 py-3 text-[12px] text-left">Active</th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                    onClick={() => handleSort("emp_id")}
+                  >
+                    Emp ID{getSortIndicator("emp_id")}
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                    onClick={() => handleSort("emp_name")}
+                  >
+                    Name{getSortIndicator("emp_name")}
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                    onClick={() => handleSort("age")}
+                  >
+                    Age{getSortIndicator("age")}
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                    onClick={() => handleSort("bloodGroup")}
+                  >
+                    Blood Group{getSortIndicator("bloodGroup")}
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                    onClick={() => handleSort("shift")}
+                  >
+                    Shift{getSortIndicator("shift")}
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                    onClick={() => handleSort("role")}
+                  >
+                    Role{getSortIndicator("role")}
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                    onClick={() => handleSort("app_access_role")}
+                  >
+                    App Role{getSortIndicator("app_access_role")}
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                    onClick={() => handleSort("active")}
+                  >
+                    Active{getSortIndicator("active")}
+                  </th>
                   <th className="px-4 py-3 text-[12px] text-left"></th>
                 </tr>
               </thead>
@@ -301,7 +439,6 @@ export const Employees = () => {
                       onMouseEnter={() => setHoveredRow(employee.id)}
                       onMouseLeave={() => setHoveredRow(null)}
                     >
-                     
                       <td className="px-4 py-2 text-[12px] text-left ">
                         {employee.emp_id ? employee.emp_id.toUpperCase().replace(/[^A-Z0-9]/g, '') : ''}
                       </td>

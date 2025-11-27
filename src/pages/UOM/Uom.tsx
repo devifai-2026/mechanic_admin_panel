@@ -23,7 +23,33 @@ export const Uom = () => {
   const [moreDropdownOpen, setMoreDropdownOpen] = useState(false);
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [rowsPerPage, setRowsPerPage] = useState(20);
+  const [sortField, setSortField] = useState<string>("");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const navigate = useNavigate();
+
+  // Sort UOMs function
+  const sortUoms = (uoms: UOM[]) => {
+    if (!sortField) return uoms;
+
+    return [...uoms].sort((a, b) => {
+      let aValue = a[sortField as keyof UOM];
+      let bValue = b[sortField as keyof UOM];
+
+      // Handle string fields with case-insensitive sorting
+      if (typeof aValue === "string" && typeof bValue === "string") {
+        aValue = aValue.toLowerCase();
+        bValue = bValue.toLowerCase();
+      }
+
+      if (aValue < bValue) {
+        return sortDirection === "asc" ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortDirection === "asc" ? 1 : -1;
+      }
+      return 0;
+    });
+  };
 
   const exportToExcel = () => {
     if (filteredUoms.length === 0) {
@@ -50,6 +76,7 @@ export const Uom = () => {
     });
 
     saveAs(data, "UOMs_export.xlsx");
+    toast.success("UOMs exported successfully!");
   };
 
   const {
@@ -91,15 +118,57 @@ export const Uom = () => {
   }, [dropdownOpen]);
 
   useEffect(() => {
+    const handleClickOutside = () => setSortMenuOpen(false);
+    if (sortMenuOpen) {
+      document.addEventListener("click", handleClickOutside);
+      return () => document.removeEventListener("click", handleClickOutside);
+    }
+  }, [sortMenuOpen]);
+
+  // Search and sort effect
+  useEffect(() => {
     const term = searchTerm.toLowerCase();
     const filtered = uoms.filter(
       (uom) =>
         uom.unit_name.toLowerCase().includes(term) ||
         uom.unit_code.toLowerCase().includes(term)
     );
-    setFilteredUoms(filtered);
+    
+    // Apply sorting to filtered results
+    const sortedUoms = sortUoms(filtered);
+    setFilteredUoms(sortedUoms);
     setCurrentPage(1); // reset pagination when search term changes
-  }, [searchTerm, uoms]);
+  }, [searchTerm, uoms, sortField, sortDirection]);
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      // Toggle direction if same field
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // Set new field with ascending direction
+      setSortField(field);
+      setSortDirection("asc");
+    }
+    setSortMenuOpen(false);
+    setMoreDropdownOpen(false);
+    
+    const fieldName = getFieldDisplayName(field);
+    const direction = sortField === field ? (sortDirection === "asc" ? "descending" : "ascending") : "ascending";
+    toast.info(`Sorted by ${fieldName} ${direction}`);
+  };
+
+  const getFieldDisplayName = (field: string) => {
+    const fieldNames: { [key: string]: string } = {
+      unit_code: "Unit Code",
+      unit_name: "Unit Name"
+    };
+    return fieldNames[field] || field;
+  };
+
+  const getSortIndicator = (field: string) => {
+    if (sortField !== field) return null;
+    return sortDirection === "asc" ? " ↑" : " ↓";
+  };
 
   const handleDelete = async (uom: UOM) => {
     if (window.confirm("Are you sure you want to delete this UOM?")) {
@@ -115,31 +184,17 @@ export const Uom = () => {
     }
   };
 
-  const handleSortByName = () => {
-    setFilteredUoms((prev) =>
-      [...prev].sort((a, b) => a.unit_name.localeCompare(b.unit_name))
-    );
-    toast.info("Sorted by Name");
-  };
-
-  const handleSortByCode = () => {
-    setFilteredUoms((prev) =>
-      [...prev].sort((a, b) => a.unit_code.localeCompare(b.unit_code))
-    );
-    toast.info("Sorted by Code");
-  };
-
   return (
     <>
       <ToastContainer position="bottom-right" autoClose={3000} />
       <div className="min-h-screen w-full dark:bg-gray-900 flex flex-col">
-        <div className="flex justify-between items-center ">
+        <div className="flex justify-between items-center px-6">
           <Title pageTitle="UOMs" />
           <div className="flex flex-wrap justify-end items-center gap-3 mb-2">
             <input
               type="text"
               placeholder="Search Name or Code"
-              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-900 dark:text-white"
+              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-900 dark:text-white w-60"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -193,24 +248,16 @@ export const Uom = () => {
                     {sortMenuOpen && (
                       <div className="absolute right-full top-0 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-40 py-1">
                         <button
-                          className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
-                          onClick={() => {
-                            setMoreDropdownOpen(false);
-                            setSortMenuOpen(false);
-                            handleSortByName();
-                          }}
+                          className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                          onClick={() => handleSort("unit_code")}
                         >
-                          Sort by Name
+                          Sort by Unit Code{getSortIndicator("unit_code")}
                         </button>
                         <button
-                          className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
-                          onClick={() => {
-                            setMoreDropdownOpen(false);
-                            setSortMenuOpen(false);
-                            handleSortByCode();
-                          }}
+                          className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                          onClick={() => handleSort("unit_name")}
                         >
-                          Sort by Code
+                          Sort by Unit Name{getSortIndicator("unit_name")}
                         </button>
                       </div>
                     )}
@@ -232,9 +279,18 @@ export const Uom = () => {
             <table className="w-full min-w-[700px] text-base bg-white dark:bg-gray-800">
               <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-sm">
                 <tr>
-                
-                  <th className="px-4 py-3 text-[12px] text-left">Unit Code</th>
-                  <th className="px-4 py-3 text-[12px] text-left">Unit Name</th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                    onClick={() => handleSort("unit_code")}
+                  >
+                    Unit Code{getSortIndicator("unit_code")}
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                    onClick={() => handleSort("unit_name")}
+                  >
+                    Unit Name{getSortIndicator("unit_name")}
+                  </th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
@@ -247,7 +303,6 @@ export const Uom = () => {
                     onMouseEnter={() => setHoveredRow(uom.id)}
                     onMouseLeave={() => setHoveredRow(null)}
                   >
-                   
                     <td className="px-4 py-3 text-[12px] text-left">{uom.unit_code}</td>
                     <td className="px-4 py-3 text-[12px] text-left">{uom.unit_name}</td>
                     <td className="flex justify-center gap-2 relative">
