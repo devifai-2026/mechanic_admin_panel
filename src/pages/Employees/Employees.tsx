@@ -496,6 +496,7 @@ export const Employees = () => {
             setCurrentPage={setCurrentPage}
             rowsPerPage={rowsPerPage}
             setRowsPerPage={setRowsPerPage}
+             totalItems={employees.length}
           />
         </div>
       </div>

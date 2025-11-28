@@ -383,6 +383,7 @@ export const Revenue = () => {
             setCurrentPage={setCurrentPage}
             rowsPerPage={rowsPerPage}
             setRowsPerPage={setRowsPerPage}
+            totalItems={filteredRevenues.length}
           />
         </div>
       </div>

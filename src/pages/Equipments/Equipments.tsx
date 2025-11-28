@@ -25,6 +25,16 @@ type EquipmentRow = {
   equipmentGroup?: Array<{
     equipment_group: string;
   }>;
+  projects?: Array<{  
+    id: string;
+    project_no: string;
+    customer_id: string;
+    order_no: string;
+    contract_start_date: string;
+    contract_end_date: string;
+    createdAt: string;
+    updatedAt: string;
+  }>;
 };
 
 type SortConfig = {
@@ -57,6 +67,16 @@ export const Equipments = () => {
       // Handle null/undefined values
       if (aValue == null) aValue = '';
       if (bValue == null) bValue = '';
+
+      // Handle projects array sorting
+      if (config.key === 'projects') {
+        const aProjectNo = a.projects && a.projects.length > 0 ? a.projects[0].project_no : '';
+        const bProjectNo = b.projects && b.projects.length > 0 ? b.projects[0].project_no : '';
+        
+        return config.direction === 'asc' 
+          ? aProjectNo.localeCompare(bProjectNo)
+          : bProjectNo.localeCompare(aProjectNo);
+      }
 
       // Handle date sorting
       if (config.key === 'purchase_date') {
@@ -109,7 +129,10 @@ export const Equipments = () => {
   const filteredEquipments = equipments.filter(
     (eq) =>
       eq.equipment_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      eq.equipment_sr_no.toLowerCase().includes(searchTerm.toLowerCase())
+      eq.equipment_sr_no.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (eq.projects && eq.projects.some(project => 
+        project.project_no.toLowerCase().includes(searchTerm.toLowerCase())
+      ))
   );
 
   const sortedEquipments = applySorting(filteredEquipments, sortConfig);
@@ -120,6 +143,21 @@ export const Equipments = () => {
     totalPages,
     paginatedData: paginatedEquipments,
   } = usePagination(sortedEquipments, rowsPerPage);
+
+  // Calculate total purchase cost for CURRENTLY DISPLAYED data (paginated)
+  const totalDisplayedPurchaseCost = paginatedEquipments.reduce((total, equipment) => {
+    return total + (equipment.purchase_cost || 0);
+  }, 0);
+
+  // Calculate total purchase cost for current view (filtered data)
+  const totalFilteredPurchaseCost = filteredEquipments.reduce((total, equipment) => {
+    return total + (equipment.purchase_cost || 0);
+  }, 0);
+
+  // Calculate total purchase cost for all equipment
+  const totalAllPurchaseCost = equipments.reduce((total, equipment) => {
+    return total + (equipment.purchase_cost || 0);
+  }, 0);
 
   const exportToCSV = (data: EquipmentRow[]) => {
     if (!data || data.length === 0) {
@@ -135,6 +173,7 @@ export const Equipments = () => {
       "OEM",
       "Purchase Cost",
       "Group",
+      "Project Tags",
     ];
 
     const rows = data.map((item) => [
@@ -145,6 +184,7 @@ export const Equipments = () => {
       item.oemDetails?.oem_code || '',
       item.purchase_cost,
       item.equipmentGroup?.map((group: any) => group.equipment_group).join(', ') || '',
+      item.projects?.map((project: any) => project.project_no).join(', ') || '',
     ]);
 
     let csvContent =
@@ -182,6 +222,15 @@ export const Equipments = () => {
 
   const handleSortByPurchaseDate = () => {
     handleSort('purchase_date');
+    setMoreDropdownOpen(false);
+    setSortMenuOpen(false);
+  };
+
+  const handleSortByProjectNo = () => {
+    setSortConfig(currentConfig => ({
+      key: 'projects' as keyof EquipmentRow,
+      direction: currentConfig.key === 'projects' && currentConfig.direction === 'asc' ? 'desc' : 'asc'
+    }));
     setMoreDropdownOpen(false);
     setSortMenuOpen(false);
   };
@@ -237,6 +286,19 @@ export const Equipments = () => {
     }
   };
 
+  // Calculate pagination display text
+  const getPaginationText = () => {
+    const totalItems = filteredEquipments.length;
+    const startItem = (currentPage - 1) * rowsPerPage + 1;
+    const endItem = Math.min(currentPage * rowsPerPage, totalItems);
+    
+    if (totalItems === 0) {
+      return "0 results";
+    }
+    
+    return `${startItem}-${endItem} of ${totalItems}`;
+  };
+
   return (
     <>
       <ToastContainer position="bottom-right" autoClose={3000} />
@@ -245,9 +307,30 @@ export const Equipments = () => {
         <div className="flex justify-between items-center px-6">
           <Title pageTitle="Equipments" />
           <div className="flex flex-wrap justify-end items-center mb-4 gap-3">
+            {/* Total Purchase Cost Display - Updated to match input box style */}
+            <div className="px-3 py-1 border rounded-md text-sm w-[200px] bg-white dark:bg-gray-800 dark:border-gray-600 ">
+              <div className="text-[10px] text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide">
+                Displayed Purchase Cost
+              </div>
+              <div className="text-sm font-bold text-green-600 dark:text-green-500 truncate">
+                ₹{totalDisplayedPurchaseCost.toLocaleString()}
+              </div>
+              <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+                {searchTerm ? (
+                  <>
+                    Filtered: ₹{totalFilteredPurchaseCost.toLocaleString()}
+                    <span className="mx-1">•</span>
+                    All: ₹{totalAllPurchaseCost.toLocaleString()}
+                  </>
+                ) : (
+                  `All: ₹${totalAllPurchaseCost.toLocaleString()}`
+                )}
+              </div>
+            </div>
+
             <input
               type="text"
-              placeholder="Search by Name or Serial No"
+              placeholder="Search by Name, Serial No, or Project"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="px-3 py-1 border rounded-md text-sm w-[200px] focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white dark:border-gray-600"
@@ -325,6 +408,12 @@ export const Equipments = () => {
                         >
                           Sort by Purchase Date
                         </button>
+                        <button
+                          className="block w-full text-left px-4 py-2 text-sm hover:text-white hover:bg-blue-500 dark:hover:bg-gray-700 transition"
+                          onClick={handleSortByProjectNo}
+                        >
+                          Sort by Project No
+                        </button>
                       </div>
                     )}
                   </div>
@@ -361,6 +450,24 @@ export const Equipments = () => {
                     <div className="flex items-center">
                       Equipment Serial No
                       {getSortIcon('equipment_sr_no')}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    onClick={handleSortByProjectNo}
+                  >
+                    <div className="flex items-center">
+                      Project Tags
+                      {sortConfig.key === 'projects' ? (
+                        sortConfig.direction === 'asc' 
+                          ? <FaSortUp size={12} className="ml-1 text-blue-500" />
+                          : <FaSortDown size={12} className="ml-1 text-blue-500" />
+                      ) : (
+                        <div className="inline-flex flex-col ml-1 opacity-30">
+                          <FaSortUp size={10} className="-mb-1" />
+                          <FaSortDown size={10} className="-mt-1" />
+                        </div>
+                      )}
                     </div>
                   </th>
                   <th className="px-4 py-3 text-[12px] text-left">
@@ -403,6 +510,25 @@ export const Equipments = () => {
                     </td>
                     <td className="px-4 py-3 text-[12px] text-left">
                       {equipment.equipment_sr_no}
+                    </td>
+                    <td className="px-4 py-3 text-[12px] text-left">
+                      {equipment.projects && equipment.projects.length > 0 ? (
+                        <div className="flex items-center">
+                          <span className="truncate max-w-[120px]">
+                            {equipment.projects[0].project_no}
+                          </span>
+                          {equipment.projects.length > 1 && (
+                            <span 
+                              className="ml-1 text-xs text-gray-500" 
+                              title={equipment.projects.slice(1).map(p => p.project_no).join(', ')}
+                            >
+                              ...+{equipment.projects.length - 1}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        "-"
+                      )}
                     </td>
                     <td className="px-4 py-3 text-[12px] text-left">
                       {equipment.additional_id}
@@ -485,16 +611,14 @@ export const Equipments = () => {
             </table>
           )}
         </div>
-
-        <div className="px-6 pb-6">
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
             setCurrentPage={setCurrentPage}
             rowsPerPage={rowsPerPage}
             setRowsPerPage={setRowsPerPage}
+            totalItems={filteredEquipments.length}
           />
-        </div>
       </div>
 
       <EquipmentDrawer

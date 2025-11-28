@@ -416,6 +416,7 @@ export const Consumable = () => {
             setCurrentPage={setCurrentPage}
             rowsPerPage={rowsPerPage}
             setRowsPerPage={setRowsPerPage}
+             totalItems={Consumable.length}
           />
         </div>
       </div>

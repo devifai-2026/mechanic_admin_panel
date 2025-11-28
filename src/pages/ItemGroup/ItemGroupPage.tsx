@@ -358,6 +358,7 @@ export const ItemGroupPage = () => {
             setCurrentPage={setCurrentPage}
             rowsPerPage={rowsPerPage}
             setRowsPerPage={setRowsPerPage}
+             totalItems={itemGroups.length}
           />
         </div>
       </div>

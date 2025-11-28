@@ -370,6 +370,7 @@ export const Organisations = () => {
             setCurrentPage={setCurrentPage}
             rowsPerPage={rowsPerPage}
             setRowsPerPage={setRowsPerPage}
+             totalItems={organisations.length}
           />
         </div>
       </div>

@@ -216,7 +216,7 @@ export const Projects = () => {
   };
 
   return (
-    <div className="h-[80vh] flex flex-col dark:bg-gray-900 overflow-hidden">
+    <div className=" flex flex-col dark:bg-gray-900 overflow-hidden">
       <ToastContainer position="bottom-right" autoClose={3000} />
 
       {/* Header */}
@@ -543,6 +543,7 @@ export const Projects = () => {
                 setCurrentPage={setCurrentPage}
                 rowsPerPage={rowsPerPage}
                 setRowsPerPage={setRowsPerPage}
+                 totalItems={projects.length}
               />
             </div>
           </>

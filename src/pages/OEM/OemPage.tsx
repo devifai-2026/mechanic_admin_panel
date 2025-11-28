@@ -332,6 +332,7 @@ export const OemPage = () => {
             setCurrentPage={setCurrentPage}
             rowsPerPage={rowsPerPage}
             setRowsPerPage={setRowsPerPage}
+             totalItems={oems.length}
           />
         </div>
       </div>
