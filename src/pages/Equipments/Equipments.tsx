@@ -341,13 +341,7 @@ export const Equipments = () => {
       <div className="min-h-screen h-full w-full dark:bg-gray-900 flex flex-col text-center">
           <Title pageTitle="Equipments" />
            <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 truncate">
-                {searchTerm ? (
-                  <>
-                    All Purchase Cost: ₹{totalAllPurchaseCost.toLocaleString()}
-                  </>
-                ) : (
-                  `All Purchase Cost: ₹${totalAllPurchaseCost.toLocaleString()}`
-                )}
+                All Purchase Cost: ₹{totalAllPurchaseCost.toLocaleString()}
               </div>
         <div className="flex justify-between items-center mx-auto mt-4">
           <div className="flex flex-wrap justify-end items-center mb-4 gap-5">
