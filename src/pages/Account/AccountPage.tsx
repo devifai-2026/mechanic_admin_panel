@@ -387,6 +387,7 @@ export const AccountPage = () => {
             setCurrentPage={setCurrentPage}
             rowsPerPage={rowsPerPage}
             setRowsPerPage={setRowsPerPage}
+             totalItems={accounts.length}
           />
         </div>
       </div>

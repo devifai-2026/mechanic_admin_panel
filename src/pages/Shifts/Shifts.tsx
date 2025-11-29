@@ -407,6 +407,7 @@ export const Shifts = () => {
             setCurrentPage={setCurrentPage}
             rowsPerPage={rowsPerPage}
             setRowsPerPage={setRowsPerPage}
+             totalItems={shifts.length}
           />
         </div>
       </div>

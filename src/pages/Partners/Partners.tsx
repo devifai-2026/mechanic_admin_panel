@@ -506,6 +506,7 @@ export const Partners = () => {
             setCurrentPage={setCurrentPage}
             rowsPerPage={rowsPerPage}
             setRowsPerPage={setRowsPerPage}
+            totalItems={filteredPartners.length}
           />
         </div>
       </div>

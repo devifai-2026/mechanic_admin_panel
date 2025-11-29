@@ -364,6 +364,7 @@ export const Roles = () => {
             setCurrentPage={setCurrentPage}
             rowsPerPage={rowsPerPage}
             setRowsPerPage={setRowsPerPage}
+             totalItems={roles.length}
           />
         </div>
       </div>

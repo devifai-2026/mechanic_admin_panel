@@ -395,6 +395,7 @@ export const StoreLocation = () => {
             setCurrentPage={setCurrentPage}
             rowsPerPage={rowsPerPage}
             setRowsPerPage={setRowsPerPage}
+             totalItems={StoreLocation.length}
           />
         </div>
       </div>
