@@ -25,16 +25,20 @@ type EquipmentRow = {
   equipmentGroup?: Array<{
     equipment_group: string;
   }>;
+  projects?: Array<{
+    project_no: string;
+  }>;
 };
 
 type SortConfig = {
-  key: keyof EquipmentRow | null;
-  direction: 'asc' | 'desc';
+  key: keyof EquipmentRow | "projects" | null;
+  direction: "asc" | "desc";
 };
 
 export const Equipments = () => {
   const [equipments, setEquipments] = useState<EquipmentRow[]>([]);
-  const [selectedEquipment, setSelectedEquipment] = useState<EquipmentRow | null>(null);
+  const [selectedEquipment, setSelectedEquipment] =
+    useState<EquipmentRow | null>(null);
   const [loading, setLoading] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
@@ -42,7 +46,10 @@ export const Equipments = () => {
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [rowsPerPage, setRowsPerPage] = useState(20);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: 'asc' });
+  const [sortConfig, setSortConfig] = useState<SortConfig>({
+    key: null,
+    direction: "asc",
+  });
 
   const navigate = useNavigate();
 
@@ -51,46 +58,71 @@ export const Equipments = () => {
     if (!config.key) return data;
 
     return [...data].sort((a, b) => {
+      // Handle project sorting separately
+      if (config.key === "projects") {
+        const aProjects = a.projects || [];
+        const bProjects = b.projects || [];
+
+        // Get the first project number for comparison, or empty string if no projects
+        const aProjectNo = aProjects.length > 0 ? aProjects[0].project_no : "";
+        const bProjectNo = bProjects.length > 0 ? bProjects[0].project_no : "";
+
+        return config.direction === "asc"
+          ? aProjectNo.localeCompare(bProjectNo)
+          : bProjectNo.localeCompare(aProjectNo);
+      }
+
       let aValue = a[config.key!];
       let bValue = b[config.key!];
 
       // Handle null/undefined values
-      if (aValue == null) aValue = '';
-      if (bValue == null) bValue = '';
+      if (aValue == null) aValue = "";
+      if (bValue == null) bValue = "";
 
-      // Handle date sorting
-      if (config.key === 'purchase_date') {
-        const aDate = new Date(aValue).getTime();
-        const bDate = new Date(bValue).getTime();
-        return config.direction === 'asc' ? aDate - bDate : bDate - aDate;
+      // Handle date sorting - only if the key is purchase_date
+      if (config.key === "purchase_date") {
+        // Ensure we're working with string values for date parsing
+        const aDateString = String(aValue);
+        const bDateString = String(bValue);
+
+        const aDate = new Date(aDateString).getTime();
+        const bDate = new Date(bDateString).getTime();
+
+        // Handle invalid dates
+        const aTime = isNaN(aDate) ? 0 : aDate;
+        const bTime = isNaN(bDate) ? 0 : bDate;
+
+        return config.direction === "asc" ? aTime - bTime : bTime - aTime;
       }
 
       // Handle numeric sorting for purchase cost
-      if (config.key === 'purchase_cost') {
+      if (config.key === "purchase_cost") {
         const aNum = Number(aValue) || 0;
         const bNum = Number(bValue) || 0;
-        return config.direction === 'asc' ? aNum - bNum : bNum - aNum;
+        return config.direction === "asc" ? aNum - bNum : bNum - aNum;
       }
 
-      // Handle string values
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        return config.direction === 'asc' 
-          ? aValue.localeCompare(bValue)
-          : bValue.localeCompare(aValue);
-      }
+      // Handle string values - convert to string for comparison
+      const aString = String(aValue);
+      const bString = String(bValue);
 
-      return 0;
+      return config.direction === "asc"
+        ? aString.localeCompare(bString)
+        : bString.localeCompare(aString);
     });
   };
 
-  const handleSort = (key: keyof EquipmentRow) => {
-    setSortConfig(currentConfig => ({
+  const handleSort = (key: keyof EquipmentRow | "projects") => {
+    setSortConfig((currentConfig) => ({
       key,
-      direction: currentConfig.key === key && currentConfig.direction === 'asc' ? 'desc' : 'asc'
+      direction:
+        currentConfig.key === key && currentConfig.direction === "asc"
+          ? "desc"
+          : "asc",
     }));
   };
 
-  const getSortIcon = (key: keyof EquipmentRow) => {
+  const getSortIcon = (key: keyof EquipmentRow | "projects") => {
     if (sortConfig.key !== key) {
       return (
         <div className="inline-flex flex-col ml-1 opacity-30">
@@ -99,18 +131,28 @@ export const Equipments = () => {
         </div>
       );
     }
-    
-    return sortConfig.direction === 'asc' 
-      ? <FaSortUp size={12} className="ml-1 text-blue-500" />
-      : <FaSortDown size={12} className="ml-1 text-blue-500" />;
+
+    return sortConfig.direction === "asc" ? (
+      <FaSortUp size={12} className="ml-1 text-blue-500" />
+    ) : (
+      <FaSortDown size={12} className="ml-1 text-blue-500" />
+    );
   };
+
+  // Calculate total purchase cost
 
   // Filtered and sorted data
   const filteredEquipments = equipments.filter(
     (eq) =>
       eq.equipment_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      eq.equipment_sr_no.toLowerCase().includes(searchTerm.toLowerCase())
+      eq.equipment_sr_no.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (eq.projects &&
+        eq.projects.some((project) =>
+          project.project_no.toLowerCase().includes(searchTerm.toLowerCase())
+        ))
   );
+
+  console.log(filteredEquipments.length);
 
   const sortedEquipments = applySorting(filteredEquipments, sortConfig);
 
@@ -135,6 +177,7 @@ export const Equipments = () => {
       "OEM",
       "Purchase Cost",
       "Group",
+      "Projects",
     ];
 
     const rows = data.map((item) => [
@@ -142,9 +185,13 @@ export const Equipments = () => {
       item.equipment_sr_no,
       item.additional_id,
       item.purchase_date,
-      item.oemDetails?.oem_code || '',
+      item.oemDetails?.oem_code || "",
       item.purchase_cost,
-      item.equipmentGroup?.map((group: any) => group.equipment_group).join(', ') || '',
+      item.equipmentGroup
+        ?.map((group: any) => group.equipment_group)
+        .join(", ") || "",
+      item.projects?.map((project: any) => project.project_no).join(", ") ||
+        "N/A",
     ]);
 
     let csvContent =
@@ -163,25 +210,25 @@ export const Equipments = () => {
   };
 
   const handleSortByName = () => {
-    handleSort('equipment_name');
+    handleSort("equipment_name");
     setMoreDropdownOpen(false);
     setSortMenuOpen(false);
   };
 
   const handleSortBySerialNo = () => {
-    handleSort('equipment_sr_no');
+    handleSort("equipment_sr_no");
     setMoreDropdownOpen(false);
     setSortMenuOpen(false);
   };
 
   const handleSortByPurchaseCost = () => {
-    handleSort('purchase_cost');
+    handleSort("purchase_cost");
     setMoreDropdownOpen(false);
     setSortMenuOpen(false);
   };
 
   const handleSortByPurchaseDate = () => {
-    handleSort('purchase_date');
+    handleSort("purchase_date");
     setMoreDropdownOpen(false);
     setSortMenuOpen(false);
   };
@@ -237,6 +284,10 @@ export const Equipments = () => {
     }
   };
 
+  const totalPurchaseCost = filteredEquipments.reduce((sum, equipment) => {
+    return sum + (equipment.purchase_cost || 0);
+  }, 0);
+
   return (
     <>
       <ToastContainer position="bottom-right" autoClose={3000} />
@@ -247,10 +298,10 @@ export const Equipments = () => {
           <div className="flex flex-wrap justify-end items-center mb-4 gap-3">
             <input
               type="text"
-              placeholder="Search by Name or Serial No"
+              placeholder="Search by Name, Serial No, or Project"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="px-3 py-1 border rounded-md text-sm w-[200px] focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white dark:border-gray-600"
+              className="px-3 py-1 border rounded-md text-sm w-[250px] focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white dark:border-gray-600"
             />
             <button
               onClick={() => navigate("/equipments/create")}
@@ -334,6 +385,30 @@ export const Equipments = () => {
           </div>
         </div>
 
+        {/* Total Purchase Cost Summary */}
+        <div className="px-6 mb-4">
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <div className="flex justify-between items-center">
+              <div>
+                <h3 className="text-lg font-semibold text-blue-800 dark:text-blue-300">
+                  Total Purchase Cost
+                </h3>
+                <p className="text-sm text-blue-600 dark:text-blue-400">
+                  Sum of all equipment purchase costs
+                </p>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-bold text-blue-800 dark:text-blue-300">
+                  ₹{totalPurchaseCost.toLocaleString()}
+                </div>
+                <div className="text-sm text-blue-600 dark:text-blue-400">
+                  {filteredEquipments.length} equipment(s)
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="overflow-x-auto flex-1 w-full overflow-auto">
           {loading ? (
             <div className="flex justify-center items-center py-10">
@@ -342,25 +417,25 @@ export const Equipments = () => {
               </span>
             </div>
           ) : (
-            <table className="w-full min-w-[900px] text-base bg-white dark:bg-gray-800">
+            <table className="w-full min-w-[1000px] text-base bg-white dark:bg-gray-800">
               <thead className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase text-sm">
                 <tr>
-                  <th 
+                  <th
                     className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                    onClick={() => handleSort('equipment_name')}
+                    onClick={() => handleSort("equipment_name")}
                   >
                     <div className="flex items-center">
                       Equipment Name
-                      {getSortIcon('equipment_name')}
+                      {getSortIcon("equipment_name")}
                     </div>
                   </th>
-                  <th 
+                  <th
                     className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                    onClick={() => handleSort('equipment_sr_no')}
+                    onClick={() => handleSort("equipment_sr_no")}
                   >
                     <div className="flex items-center">
                       Equipment Serial No
-                      {getSortIcon('equipment_sr_no')}
+                      {getSortIcon("equipment_sr_no")}
                     </div>
                   </th>
                   <th className="px-4 py-3 text-[12px] text-left">
@@ -368,24 +443,27 @@ export const Equipments = () => {
                   </th>
                   <th
                     className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                    onClick={() => handleSort('purchase_date')}
+                    onClick={() => handleSort("purchase_date")}
                   >
                     <div className="flex items-center">
                       Purchase Date
-                      {getSortIcon('purchase_date')}
+                      {getSortIcon("purchase_date")}
                     </div>
                   </th>
                   <th className="px-4 py-3 text-[12px] text-left">OEM</th>
                   <th
                     className="px-4 py-3 text-[12px] text-left cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                    onClick={() => handleSort('purchase_cost')}
+                    onClick={() => handleSort("purchase_cost")}
                   >
                     <div className="flex items-center">
                       Purchase Cost
-                      {getSortIcon('purchase_cost')}
+                      {getSortIcon("purchase_cost")}
                     </div>
                   </th>
                   <th className="px-4 py-3 text-[12px] text-left">Group</th>
+                  <th className="px-4 py-3 text-[12px] text-left">
+                    Projects {getSortIcon("Projects")}
+                  </th>
                   <th className="px-4 py-3 text-[12px]"></th>
                 </tr>
               </thead>
@@ -432,6 +510,16 @@ export const Equipments = () => {
                             .map((group: any) => group.equipment_group)
                             .join(", ")
                         : "-"}
+                    </td>
+                    <td
+                      className="px-4 py-3 text-[12px] text-left"
+                      onClick={() => handleSort("projects")}
+                    >
+                      {equipment.projects && equipment.projects.length > 0
+                        ? equipment.projects
+                            .map((project: any) => project.project_no)
+                            .join(", ")
+                        : "N/A"}
                     </td>
                     <td className="flex justify-center gap-2 relative">
                       {hoveredRow === equipment.id && (

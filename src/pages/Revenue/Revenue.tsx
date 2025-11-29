@@ -92,29 +92,37 @@ export const Revenue = () => {
     }
   };
 
-  // Apply sorting
+
   const applySorting = (data: RevenueRow[], config: SortConfig) => {
-    if (!config.key) return data;
+  if (!config.key) return data;
 
-    return [...data].sort((a, b) => {
-      let aValue = a[config.key!];
-      let bValue = b[config.key!];
+  return [...data].sort((a, b) => {
+    let aValue = a[config.key!];
+    let bValue = b[config.key!];
 
-      // Handle numeric values (revenue_value, linkedProjects)
-      if (config.key === 'revenue_value' || config.key === 'linkedProjects') {
-        return config.direction === 'asc' ? aValue - bValue : bValue - aValue;
-      }
+    // Handle null/undefined values
+    if (aValue == null) aValue = 0;
+    if (bValue == null) bValue = 0;
 
-      // Handle string values (revenue_code, revenue_description)
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        return config.direction === 'asc' 
-          ? aValue.localeCompare(bValue)
-          : bValue.localeCompare(aValue);
-      }
+    // Handle numeric values (revenue_value, linkedProjects)
+    if (config.key === 'revenue_value' || config.key === 'linkedProjects') {
+      // Convert to numbers explicitly
+      const aNum = Number(aValue) || 0;
+      const bNum = Number(bValue) || 0;
+      
+      return config.direction === 'asc' ? aNum - bNum : bNum - aNum;
+    }
 
-      return 0;
-    });
-  };
+    // Handle string values (revenue_code, revenue_description)
+    // Convert to strings for safe comparison
+    const aString = String(aValue);
+    const bString = String(bValue);
+    
+    return config.direction === 'asc' 
+      ? aString.localeCompare(bString)
+      : bString.localeCompare(aString);
+  });
+};
 
   const handleSort = (key: keyof RevenueRow) => {
     setSortConfig(currentConfig => ({

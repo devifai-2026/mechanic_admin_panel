@@ -12,12 +12,10 @@ import { ItemGroup } from "../../types/itemGroupTypes";
 import { OEM } from "../../types/oemTypes";
 import { UOM } from "../../types/uomTypes";
 import { Account } from "../../types/accountTypes";
-import { RevenueMaster } from "../../types/revenueMasterTypes.";
 import { getAllItemGroups } from "../../apis/intemGroupApi";
 import { getAllOEMs } from "../../apis/oemApi";
 import { getAllUOMs } from "../../apis/uomApi";
 import { getAllAccounts } from "../../apis/accountApi";
-import { fetchRevenues } from "../../apis/revenueApi";
 import ConsumableBulkUpload from "./ConsumableBulkUpload";
 
 export default function ConsumableFormPage() {
@@ -44,7 +42,7 @@ export default function ConsumableFormPage() {
   const [oems, setOems] = useState<OEM[]>([]);
   const [uoms, setUoms] = useState<UOM[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [revenues, setRevenues] = useState<RevenueMaster[]>([]);
+
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"form" | "bulk">("form");
 
@@ -72,14 +70,12 @@ export default function ConsumableFormPage() {
       getAllOEMs(),
       getAllUOMs(),
       getAllAccounts(),
-      fetchRevenues(),
     ])
-      .then(([groups, oems, uoms, accounts, revenues]) => {
+      .then(([groups, oems, uoms, accounts]) => {
         setItemGroups(groups);
         setOems(oems);
         setUoms(uoms);
         setAccounts(accounts);
-        setRevenues(revenues);
       })
       .catch(() => toast.error("Failed to fetch dropdown data"));
   }, []);
