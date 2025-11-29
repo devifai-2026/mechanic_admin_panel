@@ -286,70 +286,78 @@ export const Equipments = () => {
     }
   };
 
-  // Calculate pagination display text
-  const getPaginationText = () => {
-    const totalItems = filteredEquipments.length;
-    const startItem = (currentPage - 1) * rowsPerPage + 1;
-    const endItem = Math.min(currentPage * rowsPerPage, totalItems);
-    
-    if (totalItems === 0) {
-      return "0 results";
-    }
-    
-    return `${startItem}-${endItem} of ${totalItems}`;
-  };
-
   return (
     <>
       <ToastContainer position="bottom-right" autoClose={3000} />
 
-      <div className="min-h-screen h-full w-full dark:bg-gray-900 flex flex-col">
-        <div className="flex justify-between items-center px-6">
+      <div className="min-h-screen h-full w-full dark:bg-gray-900 flex flex-col text-center">
           <Title pageTitle="Equipments" />
-          <div className="flex flex-wrap justify-end items-center mb-4 gap-3">
-            {/* Total Purchase Cost Display - Updated to match input box style */}
-            <div className="px-3 py-1 border rounded-md text-sm w-[200px] bg-white dark:bg-gray-800 dark:border-gray-600 ">
-              <div className="text-[10px] text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide">
-                Displayed Purchase Cost
-              </div>
-              <div className="text-sm font-bold text-green-600 dark:text-green-500 truncate">
-                ₹{totalDisplayedPurchaseCost.toLocaleString()}
-              </div>
-              <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+           <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 truncate">
                 {searchTerm ? (
                   <>
-                    Filtered: ₹{totalFilteredPurchaseCost.toLocaleString()}
-                    <span className="mx-1">•</span>
-                    All: ₹{totalAllPurchaseCost.toLocaleString()}
+                    All Purchase Cost: ₹{totalAllPurchaseCost.toLocaleString()}
                   </>
                 ) : (
-                  `All: ₹${totalAllPurchaseCost.toLocaleString()}`
+                  `All Purchase Cost: ₹${totalAllPurchaseCost.toLocaleString()}`
+                )}
+              </div>
+        <div className="flex justify-between items-center mx-auto mt-4">
+          <div className="flex flex-wrap justify-end items-center mb-4 gap-5">
+            {/* Total Equipment Count */}
+            <div className="px-4 py-2 border rounded-md text-sm w-[200px] bg-white dark:bg-gray-800 dark:border-gray-600 shadow-sm flex items-center gap-1.5">
+              <div className="text-[10px] text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide">
+                Total Equipments :
+              </div>
+              <div className="text-sm font-bold text-blue-600 dark:text-blue-500 truncate">
+                {filteredEquipments.length.toLocaleString()}
+                {searchTerm && (
+                  <span className="text-xs text-gray-500 ml-1">
+                    of {equipments.length.toLocaleString()}
+                  </span>
                 )}
               </div>
             </div>
 
+            {/* Purchase Cost Display */}
+            <div className="px-4 py-2 border rounded-md text-sm w-[200px] bg-white dark:bg-gray-800 dark:border-gray-600 shadow-sm flex items-center gap-1.5">
+              <div className="text-[10px] text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide">
+                Purchase Cost :
+              </div>
+              <div className="text-sm font-bold text-green-600 dark:text-green-500 truncate">
+                ₹{totalDisplayedPurchaseCost.toLocaleString()}
+              </div>
+             
+            </div>
+
+            {/* Search Box */}
             <input
               type="text"
               placeholder="Search by Name, Serial No, or Project"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="px-3 py-1 border rounded-md text-sm w-[200px] focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white dark:border-gray-600"
+              className="px-4 py-2 border rounded-md text-sm w-[200px] focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white dark:border-gray-600 shadow-sm"
             />
+
+            {/* New Button */}
             <button
               onClick={() => navigate("/equipments/create")}
-              className="flex items-center justify-center gap-2 px-4 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition"
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition shadow-sm h-[42px]"
             >
               <FaPlus />
               <span>New</span>
             </button>
-            <span
-              className="p-2 bg-gray-200 border-2 border-gray-50 rounded-lg cursor-pointer relative dark:bg-gray-700 dark:border-gray-600"
-              onClick={(e) => {
-                e.stopPropagation();
-                setMoreDropdownOpen((prev) => !prev);
-              }}
-            >
-              <IoIosMore />
+
+            {/* More Options */}
+            <div className="relative">
+              <button
+                className="flex items-center justify-center p-2 bg-gray-200 border-2 border-gray-50 rounded-lg cursor-pointer dark:bg-gray-700 dark:border-gray-600 shadow-sm h-[42px] w-[42px]"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMoreDropdownOpen((prev) => !prev);
+                }}
+              >
+                <IoIosMore />
+              </button>
               {moreDropdownOpen && (
                 <div className="absolute right-0 mt-2 w-40 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-30 py-1">
                   <button
@@ -419,7 +427,7 @@ export const Equipments = () => {
                   </div>
                 </div>
               )}
-            </span>
+            </div>
           </div>
         </div>
 
