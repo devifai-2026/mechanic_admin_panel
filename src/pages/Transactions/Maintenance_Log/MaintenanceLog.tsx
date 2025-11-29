@@ -293,6 +293,7 @@ export const MaintenanceLog = () => {
             setCurrentPage={setCurrentPage}
             rowsPerPage={rowsPerPage}
             setRowsPerPage={setRowsPerPage}
+            totalItems={maintenanceLogs.length}
           />
         </div>
       </div>

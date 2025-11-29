@@ -12,12 +12,10 @@ import { ItemGroup } from "../../types/itemGroupTypes";
 import { OEM } from "../../types/oemTypes";
 import { UOM } from "../../types/uomTypes";
 import { Account } from "../../types/accountTypes";
-import { RevenueMaster } from "../../types/revenueMasterTypes.";
 import { getAllItemGroups } from "../../apis/intemGroupApi";
 import { getAllOEMs } from "../../apis/oemApi";
 import { getAllUOMs } from "../../apis/uomApi";
 import { getAllAccounts } from "../../apis/accountApi";
-import { fetchRevenues } from "../../apis/revenueApi";
 import ConsumableBulkUpload from "./ConsumableBulkUpload";
 
 export default function ConsumableFormPage() {
@@ -44,7 +42,6 @@ export default function ConsumableFormPage() {
   const [oems, setOems] = useState<OEM[]>([]);
   const [uoms, setUoms] = useState<UOM[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [revenues, setRevenues] = useState<RevenueMaster[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"form" | "bulk">("form");
 
@@ -72,14 +69,12 @@ export default function ConsumableFormPage() {
       getAllOEMs(),
       getAllUOMs(),
       getAllAccounts(),
-      fetchRevenues(),
     ])
-      .then(([groups, oems, uoms, accounts, revenues]) => {
+      .then(([groups, oems, uoms, accounts]) => {
         setItemGroups(groups);
         setOems(oems);
         setUoms(uoms);
         setAccounts(accounts);
-        setRevenues(revenues);
       })
       .catch(() => toast.error("Failed to fetch dropdown data"));
   }, []);
@@ -121,10 +116,15 @@ export default function ConsumableFormPage() {
       if (numeric.length <= 8) {
         setFormData((prev) => ({ ...prev, [name]: numeric }));
       }
+    } else if (type === "number") {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value === "" ? 0 : parseFloat(value),
+      }));
     } else {
       setFormData((prev) => ({
         ...prev,
-        [name]: type === "number" ? parseFloat(value) : value,
+        [name]: value,
       }));
     }
   };
@@ -262,6 +262,7 @@ export default function ConsumableFormPage() {
               onChange={handleChange}
               type="number"
               placeholder="Enter current quantity"
+              min="0"
             />
             <InputFieldHSN
               label="HSN Number"
@@ -335,20 +336,24 @@ export default function ConsumableFormPage() {
 }
 
 // Reusable Input Components
-const InputField = ({
+interface InputFieldProps {
+  label: string;
+  name: string;
+  value: string | number;
+  onChange: React.ChangeEventHandler<HTMLInputElement>;
+  type?: string;
+  placeholder?: string;
+  min?: string;
+}
+
+const InputField: React.FC<InputFieldProps> = ({
   label,
   name,
   value,
   onChange,
   type = "text",
   placeholder = "",
-}: {
-  label: string;
-  name: string;
-  value: any;
-  onChange: React.ChangeEventHandler<HTMLInputElement>;
-  type?: string;
-  placeholder?: string;
+  min,
 }) => {
   const defaultPlaceholders: Record<string, string> = {
     itemCode: "Enter item code (e.g., ITM001)",
@@ -369,22 +374,25 @@ const InputField = ({
         value={value}
         onChange={onChange}
         placeholder={fieldPlaceholder}
+        min={min}
         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-800 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
       />
     </div>
   );
 };
 
-const InputFieldHSN = ({
-  label,
-  name,
-  value,
-  onChange,
-}: {
+interface InputFieldHSNProps {
   label: string;
   name: string;
   value: string;
   onChange: React.ChangeEventHandler<HTMLInputElement>;
+}
+
+const InputFieldHSN: React.FC<InputFieldHSNProps> = ({
+  label,
+  name,
+  value,
+  onChange,
 }) => (
   <div>
     <label className="mb-1 text-gray-700 dark:text-gray-200 font-medium">
@@ -404,18 +412,20 @@ const InputFieldHSN = ({
   </div>
 );
 
-const TextAreaField = ({
+interface TextAreaFieldProps {
+  label: string;
+  name: string;
+  value: string;
+  onChange: React.ChangeEventHandler<HTMLTextAreaElement>;
+  placeholder?: string;
+}
+
+const TextAreaField: React.FC<TextAreaFieldProps> = ({
   label,
   name,
   value,
   onChange,
   placeholder = "",
-}: {
-  label: string;
-  name: string;
-  value: any;
-  onChange: React.ChangeEventHandler<HTMLTextAreaElement>;
-  placeholder?: string;
 }) => (
   <div className="md:col-span-2">
     <label className="mb-1 text-gray-700 dark:text-gray-200 font-medium">
@@ -432,20 +442,22 @@ const TextAreaField = ({
   </div>
 );
 
-const SelectField = ({
-  label,
-  name,
-  value,
-  onChange,
-  options,
-  helperText,
-}: {
+interface SelectFieldProps {
   label: string;
   name: string;
   value: string;
   onChange: React.ChangeEventHandler<HTMLSelectElement>;
   options: { label: string; value: string }[];
   helperText?: string;
+}
+
+const SelectField: React.FC<SelectFieldProps> = ({
+  label,
+  name,
+  value,
+  onChange,
+  options,
+  helperText,
 }) => (
   <div>
     <label className="mb-1 text-gray-700 dark:text-gray-200 font-medium">

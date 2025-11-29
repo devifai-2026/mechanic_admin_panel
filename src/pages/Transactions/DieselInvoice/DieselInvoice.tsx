@@ -280,6 +280,7 @@ export const DieselInvoice = () => {
                         setCurrentPage={setCurrentPage}
                         rowsPerPage={rowsPerPage}
                         setRowsPerPage={setRowsPerPage}
+                        totalItems={DieselInvoice.length}
                     />
                 </div>
             </div>

@@ -302,6 +302,7 @@ export const ConsumptionSheet = () => {
             setCurrentPage={setCurrentPage}
             rowsPerPage={rowsPerPage}
             setRowsPerPage={setRowsPerPage}
+            totalItems={ConsumptionSheet.length}
           />
         </div>
       </div>

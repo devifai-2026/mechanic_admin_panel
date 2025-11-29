@@ -303,6 +303,7 @@ export const DailyProgressReport = () => {
             setCurrentPage={setCurrentPage}
             rowsPerPage={rowsPerPage}
             setRowsPerPage={setRowsPerPage}
+            totalItems={DailyProgressReport.length}
           />
         </div>
       </div>

@@ -303,6 +303,7 @@ export const EquipmentTransactions = () => {
             setCurrentPage={setCurrentPage}
             rowsPerPage={rowsPerPage}
             setRowsPerPage={setRowsPerPage}
+            totalItems={EquipmentTransactions.length}
           />
         </div>
       </div>

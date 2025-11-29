@@ -10,6 +10,15 @@ import { IoIosMore } from "react-icons/io";
 import { FaSortUp, FaSortDown } from "react-icons/fa";
 import RevenueDrawer from "./RevenueDrawer";
 
+// Define proper types for the API response
+type RevenueApiResponse = {
+  id: string;
+  revenue_code: string;
+  revenue_description: string;
+  revenue_value: number;
+  linkedProjects?: number;
+};
+
 type RevenueRow = {
   id: string;
   revenue_code: string;
@@ -42,8 +51,11 @@ export const Revenue = () => {
     setLoading(true);
     try {
       const data = await fetchRevenues();
+      // Type assertion to ensure we're working with the correct type
+      const revenueData = data as RevenueApiResponse[];
+      
       setRevenues(
-        data.map((item: any) => ({
+        revenueData.map((item: RevenueApiResponse) => ({
           id: item.id,
           revenue_code: item.revenue_code,
           revenue_description: item.revenue_description,
@@ -100,9 +112,15 @@ export const Revenue = () => {
       let aValue = a[config.key!];
       let bValue = b[config.key!];
 
+      // Handle null/undefined values
+      if (aValue == null) aValue = '';
+      if (bValue == null) bValue = '';
+
       // Handle numeric values (revenue_value, linkedProjects)
       if (config.key === 'revenue_value' || config.key === 'linkedProjects') {
-        return config.direction === 'asc' ? aValue - bValue : bValue - aValue;
+        const aNum = Number(aValue) || 0;
+        const bNum = Number(bValue) || 0;
+        return config.direction === 'asc' ? aNum - bNum : bNum - aNum;
       }
 
       // Handle string values (revenue_code, revenue_description)
