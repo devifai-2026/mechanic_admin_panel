@@ -362,6 +362,7 @@ export const Uom = () => {
             setCurrentPage={setCurrentPage}
             rowsPerPage={rowsPerPage}
             setRowsPerPage={setRowsPerPage}
+             totalItems={uoms.length}
           />
         </div>
       </div>

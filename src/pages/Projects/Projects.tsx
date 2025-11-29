@@ -52,6 +52,17 @@ export const Projects = () => {
 
   const navigate = useNavigate();
 
+  // Function to truncate long text
+  const truncateText = (text: string, maxLength: number = 30): { display: string; full: string } => {
+    if (!text || text.length <= maxLength) {
+      return { display: text, full: text };
+    }
+    return {
+      display: text.substring(0, maxLength) + "...",
+      full: text
+    };
+  };
+
   const fetchAndSetProjects = async () => {
     setLoading(true);
     try {
@@ -102,6 +113,11 @@ export const Projects = () => {
         duration = parts.join(" ");
       }
 
+      // Create revenue text and truncated version
+      const revenueText = p.revenues.length > 0
+        ? p.revenues.map((r: any) => r.revenue_description).join(", ")
+        : "N/A";
+
       return {
         id: p.id,
         projectNo: p.project_no,
@@ -110,10 +126,7 @@ export const Projects = () => {
         contractStart: p.contract_start_date?.split("T")[0] || "N/A",
         tenure: p.contract_tenure,
         duration,
-        revenues:
-          p.revenues.length > 0
-            ? p.revenues.map((r: any) => r.revenue_description).join(", ")
-            : "N/A",
+        revenues: revenueText,
         equipments: p.equipments.length,
         staff: p.staff.length,
         locations: p.store_locations.length,
@@ -216,7 +229,7 @@ export const Projects = () => {
   };
 
   return (
-    <div className="h-[80vh] flex flex-col dark:bg-gray-900 overflow-hidden">
+    <div className=" flex flex-col dark:bg-gray-900 overflow-hidden">
       <ToastContainer position="bottom-right" autoClose={3000} />
 
       {/* Header */}
@@ -384,152 +397,167 @@ export const Projects = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 dark:divide-gray-600 text-gray-800 dark:text-gray-100 text-center">
-                      {paginatedProjects?.map((project, idx) => (
-                        <tr
-                          key={idx}
-                          className="even:bg-gray-200 dark:even:bg-gray-900 cursor-pointer"
-                          onClick={() =>
-                            navigate(`/projects/${project.id}`, {
-                              state: { project: rawProjects[idx] },
-                            })
-                          }
-                          onMouseEnter={() => setHoveredRow(project.projectNo)}
-                          onMouseLeave={() => setHoveredRow(null)}
-                        >
-                          <td className="px-4 py-2 text-[12px] text-left">
-                            {project.projectNo}
-                          </td>
-                          <td className="px-4 py-2 text-[12px] text-left">
-                            {project.customer}
-                          </td>
-                          <td className="px-4 py-2 text-[12px] text-left">
-                            {project.orderNo}
-                          </td>
-                          <td className="px-4 py-2 text-[12px] text-left">
-                            {project.contractStart}
-                          </td>
-                          <td className="px-4 py-2 text-[12px] text-left">
-                            {project.duration}
-                          </td>
-                          <td className="px-4 py-2 text-[12px] text-left">
-                            {project.revenues}
-                          </td>
-                          <td className="px-4 py-2 text-[12px] text-left">
-                            {project.equipments}
-                          </td>
-                          <td className="px-4 py-2 text-[12px] text-left">
-                            {project.staff}
-                          </td>
-                          <td className="px-4 py-2 text-[12px] text-left">
-                            {project.locations}
-                          </td>
-                          <td className="flex justify-center gap-2 relative">
-                            {hoveredRow === project.projectNo && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setDropdownOpen(
-                                    dropdownOpen === project.projectNo
-                                      ? null
-                                      : project.projectNo
-                                  );
-                                }}
-                                className="w-8 h-8 flex items-center justify-center rounded-full transition"
-                                title="Actions"
-                              >
-                                <FaCircleChevronDown
-                                  className="text-blue-500"
-                                  size={20}
-                                />
-                              </button>
-                            )}
-                            {dropdownOpen === project.projectNo && (
-                              <div
-                                className="absolute z-20 right-0 mt-8 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg py-1"
+                      {paginatedProjects?.map((project, idx) => {
+                        const truncatedRevenue = truncateText(project.revenues, 30);
+                        
+                        return (
+                          <tr
+                            key={idx}
+                            className="even:bg-gray-200 dark:even:bg-gray-900 cursor-pointer"
+                            onClick={() =>
+                              navigate(`/projects/${project.id}`, {
+                                state: { project: rawProjects[idx] },
+                              })
+                            }
+                            onMouseEnter={() => setHoveredRow(project.projectNo)}
+                            onMouseLeave={() => setHoveredRow(null)}
+                          >
+                            <td className="px-4 py-2 text-[12px] text-left">
+                              {project.projectNo}
+                            </td>
+                            <td className="px-4 py-2 text-[12px] text-left">
+                              {project.customer}
+                            </td>
+                            <td className="px-4 py-2 text-[12px] text-left">
+                              {project.orderNo}
+                            </td>
+                            <td className="px-4 py-2 text-[12px] text-left">
+                              {project.contractStart}
+                            </td>
+                            <td className="px-4 py-2 text-[12px] text-left">
+                              {project.duration}
+                            </td>
+                            <td className="px-4 py-2 text-[12px] text-left">
+                              <div 
+                                className="relative group"
                                 onClick={(e) => e.stopPropagation()}
                               >
+                                <span>{truncatedRevenue.display}</span>
+                                {truncatedRevenue.display !== truncatedRevenue.full && (
+                                  <div className="absolute invisible group-hover:visible z-50 bottom-full left-0 mb-2 w-64 p-2 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-lg shadow-lg break-words">
+                                    {truncatedRevenue.full}
+                                    <div className="absolute top-full left-4 border-4 border-transparent border-t-gray-900 dark:border-t-gray-700"></div>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-2 text-[12px] text-left">
+                              {project.equipments}
+                            </td>
+                            <td className="px-4 py-2 text-[12px] text-left">
+                              {project.staff}
+                            </td>
+                            <td className="px-4 py-2 text-[12px] text-left">
+                              {project.locations}
+                            </td>
+                            <td className="flex justify-center gap-2 relative">
+                              {hoveredRow === project.projectNo && (
                                 <button
-                                  className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
-                                  onClick={() => {
-                                    setDropdownOpen(null);
-                                    navigate(
-                                      `/projects/add/employees/${project.id}`
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setDropdownOpen(
+                                      dropdownOpen === project.projectNo
+                                        ? null
+                                        : project.projectNo
                                     );
                                   }}
+                                  className="w-8 h-8 flex items-center justify-center rounded-full transition"
+                                  title="Actions"
                                 >
-                                  Add Employees
+                                  <FaCircleChevronDown
+                                    className="text-blue-500"
+                                    size={20}
+                                  />
                                 </button>
-                                {project.staff > 0 && (
+                              )}
+                              {dropdownOpen === project.projectNo && (
+                                <div
+                                  className="absolute z-20 right-0 mt-8 w-40 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg py-1"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
                                   <button
                                     className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
                                     onClick={() => {
                                       setDropdownOpen(null);
                                       navigate(
-                                        `/projects/edit/employees/${project.id}`
+                                        `/projects/add/employees/${project.id}`
                                       );
                                     }}
                                   >
-                                    Edit Employees
+                                    Add Employees
                                   </button>
-                                )}
-                                <button
-                                  className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
-                                  onClick={() => {
-                                    setDropdownOpen(null);
-                                    navigate(`/projects/edit/${project.id}`);
-                                  }}
-                                >
-                                  Edit
-                                </button>
-                                <button
-                                  className="block w-full text-left px-4 py-2 text-sm hover:bg-red-500 hover:text-white dark:hover:bg-gray-700 transition flex items-center justify-between"
-                                  onClick={async () => {
-                                    setIsDeleting(true);
-                                    try {
-                                      await deleteProject(project.id);
-                                      toast.success(
-                                        "Project deleted successfully!"
-                                      );
-                                      setDropdownOpen(null);
-                                      fetchAndSetProjects();
-                                    } catch (error) {
-                                      console.error("Delete failed:", error);
-                                      toast.error("Failed to delete project");
-                                    } finally {
-                                      setIsDeleting(false);
-                                    }
-                                  }}
-                                  disabled={isDeleting}
-                                >
-                                  Delete
-                                  {isDeleting && (
-                                    <svg
-                                      className="animate-spin h-4 w-4 ml-2"
-                                      xmlns="http://www.w3.org/2000/svg"
-                                      fill="none"
-                                      viewBox="0 0 24 24"
+                                  {project.staff > 0 && (
+                                    <button
+                                      className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
+                                      onClick={() => {
+                                        setDropdownOpen(null);
+                                        navigate(
+                                          `/projects/edit/employees/${project.id}`
+                                        );
+                                      }}
                                     >
-                                      <circle
-                                        className="opacity-25"
-                                        cx="12"
-                                        cy="12"
-                                        r="10"
-                                        stroke="currentColor"
-                                        strokeWidth="4"
-                                      ></circle>
-                                      <path
-                                        className="opacity-75"
-                                        fill="currentColor"
-                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                      ></path>
-                                    </svg>
+                                      Edit Employees
+                                    </button>
                                   )}
-                                </button>
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
+                                  <button
+                                    className="block w-full text-left px-4 py-2 text-sm hover:bg-blue-500 hover:text-white dark:hover:bg-gray-700 transition"
+                                    onClick={() => {
+                                      setDropdownOpen(null);
+                                      navigate(`/projects/edit/${project.id}`);
+                                    }}
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    className="block w-full text-left px-4 py-2 text-sm hover:bg-red-500 hover:text-white dark:hover:bg-gray-700 transition flex items-center justify-between"
+                                    onClick={async () => {
+                                      setIsDeleting(true);
+                                      try {
+                                        await deleteProject(project.id);
+                                        toast.success(
+                                          "Project deleted successfully!"
+                                        );
+                                        setDropdownOpen(null);
+                                        fetchAndSetProjects();
+                                      } catch (error) {
+                                        console.error("Delete failed:", error);
+                                        toast.error("Failed to delete project");
+                                      } finally {
+                                        setIsDeleting(false);
+                                      }
+                                    }}
+                                    disabled={isDeleting}
+                                  >
+                                    Delete
+                                    {isDeleting && (
+                                      <svg
+                                        className="animate-spin h-4 w-4 ml-2"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <circle
+                                          className="opacity-25"
+                                          cx="12"
+                                          cy="12"
+                                          r="10"
+                                          stroke="currentColor"
+                                          strokeWidth="4"
+                                        ></circle>
+                                        <path
+                                          className="opacity-75"
+                                          fill="currentColor"
+                                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                        ></path>
+                                      </svg>
+                                    )}
+                                  </button>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -543,6 +571,7 @@ export const Projects = () => {
                 setCurrentPage={setCurrentPage}
                 rowsPerPage={rowsPerPage}
                 setRowsPerPage={setRowsPerPage}
+                 totalItems={projects.length}
               />
             </div>
           </>

@@ -356,6 +356,7 @@ export const EquipmentGroup = () => {
                         setCurrentPage={setCurrentPage}
                         rowsPerPage={rowsPerPage}
                         setRowsPerPage={setRowsPerPage}
+                         totalItems={equipmentGroups.length}
                     />
                 </div>
             </div>

@@ -7,6 +7,7 @@ const Pagination: React.FC<
   PaginationProps & {
     rowsPerPage: number;
     setRowsPerPage: (n: number) => void;
+    totalItems: number; // Add this prop
   }
 > = ({
   currentPage,
@@ -14,10 +15,11 @@ const Pagination: React.FC<
   setCurrentPage,
   rowsPerPage,
   setRowsPerPage,
+  totalItems, // Use this for total count
 }) => {
   // Calculate the range of items being shown
   const start = (currentPage - 1) * rowsPerPage + 1;
-  const end = Math.min(currentPage * rowsPerPage, totalPages * rowsPerPage);
+  const end = Math.min(currentPage * rowsPerPage, totalItems);
 
   return (
     <div className="flex flex-wrap justify-end items-center gap-4 mt-4">
@@ -25,7 +27,7 @@ const Pagination: React.FC<
         <select
           value={rowsPerPage}
           onChange={(e) => setRowsPerPage(Number(e.target.value))}
-          className="px-2 py-1 rounded-md border border-gray-300  bg-white"
+          className="px-2 py-1 rounded-md border border-gray-300 bg-white"
         >
           {rowsPerPageOptions.map((opt) => (
             <option
@@ -54,7 +56,7 @@ const Pagination: React.FC<
           {start}
           {end > start && ` - ${end}`}
         </span>
-        <span>of {totalPages * rowsPerPage}</span>
+        <span>of {totalItems}</span> {/* Use totalItems instead of totalPages * rowsPerPage */}
       </span>
       <button
         onClick={() => setCurrentPage(Math.min(currentPage + 1, totalPages))}
