@@ -289,6 +289,7 @@ export const RevenueInvoice = () => {
                         setCurrentPage={setCurrentPage}
                         rowsPerPage={rowsPerPage}
                         setRowsPerPage={setRowsPerPage}
+                        totalItems={RevenueInvoice.length}
                     />
                 </div>
             </div>

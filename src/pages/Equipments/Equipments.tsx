@@ -10,6 +10,18 @@ import EquipmentDrawer from "./EquipmentDrawer";
 import { useNavigate } from "react-router";
 import Title from "../../components/common/Title";
 
+// Import the actual API types
+import { EquipmentResponse, ProjectTag } from "../../types/equipmentTypes";
+
+// Extend the EquipmentResponse type to include oemDetails
+type ExtendedEquipmentResponse = EquipmentResponse & {
+  oemDetails?: {
+    id: string;
+    oem_name: string;
+    oem_code: string;
+  };
+};
+
 type EquipmentRow = {
   id: string;
   equipment_name: string;
@@ -37,9 +49,46 @@ type EquipmentRow = {
   }>;
 };
 
+// Extended ProjectTag type with optional properties
+type ExtendedProjectTag = ProjectTag & {
+  customer_id?: string;
+  order_no?: string;
+  contract_start_date?: string;
+  contract_end_date?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
 type SortConfig = {
   key: keyof EquipmentRow | null;
   direction: 'asc' | 'desc';
+};
+
+// Helper function to transform API response to EquipmentRow
+const transformEquipmentData = (data: ExtendedEquipmentResponse[]): EquipmentRow[] => {
+  return data.map((item) => ({
+    id: item.id,
+    equipment_name: item.equipment_name,
+    equipment_sr_no: item.equipment_sr_no,
+    additional_id: item.additional_id,
+    purchase_date: item.purchase_date,
+    oem: item.oem,
+    purchase_cost: item.purchase_cost,
+    equipment_group_id: item.equipment_group_id,
+    // Use oemDetails from API response
+    oemDetails: item.oemDetails ? { oem_code: item.oemDetails.oem_code } : { oem_code: item.oem },
+    equipmentGroup: item.equipmentGroup,
+    projects: item.projects?.map((project: ExtendedProjectTag) => ({
+      id: project.id,
+      project_no: project.project_no,
+      customer_id: project.customer_id || '',
+      order_no: project.order_no || '',
+      contract_start_date: project.contract_start_date || '',
+      contract_end_date: project.contract_end_date || '',
+      createdAt: project.createdAt || '',
+      updatedAt: project.updatedAt || ''
+    }))
+  }));
 };
 
 export const Equipments = () => {
@@ -78,10 +127,10 @@ export const Equipments = () => {
           : bProjectNo.localeCompare(aProjectNo);
       }
 
-      // Handle date sorting
+      // Handle date sorting - ensure we only pass string values to Date constructor
       if (config.key === 'purchase_date') {
-        const aDate = new Date(aValue).getTime();
-        const bDate = new Date(bValue).getTime();
+        const aDate = new Date(aValue as string).getTime();
+        const bDate = new Date(bValue as string).getTime();
         return config.direction === 'asc' ? aDate - bDate : bDate - aDate;
       }
 
@@ -176,10 +225,10 @@ export const Equipments = () => {
       item.equipment_sr_no,
       item.additional_id,
       item.purchase_date,
-      item.oemDetails?.oem_code || '',
+      item.oemDetails?.oem_code || item.oem || '',
       item.purchase_cost,
-      item.equipmentGroup?.map((group: any) => group.equipment_group).join(', ') || '',
-      item.projects?.map((project: any) => project.project_no).join(', ') || '',
+      item.equipmentGroup?.map((group) => group.equipment_group).join(', ') || '',
+      item.projects?.map((project) => project.project_no).join(', ') || '',
     ]);
 
     let csvContent =
@@ -235,7 +284,9 @@ export const Equipments = () => {
       setLoading(true);
       try {
         const data = await fetchEquipments();
-        setEquipments(data);
+        // Type assertion to include oemDetails
+        const transformedData = transformEquipmentData(data as ExtendedEquipmentResponse[]);
+        setEquipments(transformedData);
       } catch (err) {
         console.error("Failed to fetch equipments", err);
       }
@@ -271,7 +322,9 @@ export const Equipments = () => {
       try {
         await deleteEquipment(equipment.id);
         const data = await fetchEquipments();
-        setEquipments(data);
+        // Type assertion to include oemDetails
+        const transformedData = transformEquipmentData(data as ExtendedEquipmentResponse[]);
+        setEquipments(transformedData);
         toast.success("Equipment deleted successfully!");
       } catch (err) {
         console.error("Failed to delete equipment", err);
@@ -540,7 +593,7 @@ export const Equipments = () => {
                       })()}
                     </td>
                     <td className="px-4 py-3 text-[12px] text-left">
-                      {equipment?.oemDetails?.oem_code}
+                      {equipment?.oemDetails?.oem_code || equipment.oem}
                     </td>
                     <td className="px-4 py-3 text-[12px] text-left">
                       {equipment.purchase_cost
@@ -551,7 +604,7 @@ export const Equipments = () => {
                       {equipment.equipmentGroup &&
                       equipment.equipmentGroup.length > 0
                         ? equipment.equipmentGroup
-                            .map((group: any) => group.equipment_group)
+                            .map((group) => group.equipment_group)
                             .join(", ")
                         : "-"}
                     </td>

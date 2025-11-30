@@ -284,6 +284,7 @@ export const AllExpenses = () => {
                         setCurrentPage={setCurrentPage}
                         rowsPerPage={rowsPerPage}
                         setRowsPerPage={setRowsPerPage}
+                        totalItems={AllExpenses.length}
                     />
                 </div>
             </div>

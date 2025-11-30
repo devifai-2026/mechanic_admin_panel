@@ -310,6 +310,7 @@ export const MaterialTransactions = () => {
             setCurrentPage={setCurrentPage}
             rowsPerPage={rowsPerPage}
             setRowsPerPage={setRowsPerPage}
+            totalItems={MaterialTransactions.length}
           />
         </div>
       </div>

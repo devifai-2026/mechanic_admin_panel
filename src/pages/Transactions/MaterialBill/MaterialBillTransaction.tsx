@@ -283,6 +283,7 @@ export const MaterialBillTransaction = () => {
                         setCurrentPage={setCurrentPage}
                         rowsPerPage={rowsPerPage}
                         setRowsPerPage={setRowsPerPage}
+                        totalItems={MaterialBillTransaction.length}
                     />
                 </div>
             </div>
